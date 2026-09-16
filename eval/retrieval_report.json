@@ -1,0 +1,201 @@
+{
+  "metric": "Recall@5 & MRR",
+  "num_test_cases": 8,
+  "recall_at_k": 1.0,
+  "mrr": 1.0,
+  "k": 5,
+  "details": [
+    {
+      "id": "TC-01",
+      "query": "What is the minimum public shareholding requirement under SEBI LODR?",
+      "hit": true,
+      "rank": 1,
+      "expected_source": "sebi_lodr_2015.pdf",
+      "top_retrieved": [
+        {
+          "source": "sebi_lodr_2015.pdf",
+          "score": 5.025872230529785,
+          "snippet": "ulation 38: Minimum Public Shareholding. The listed entity shall comply with the minimum public shar"
+        },
+        {
+          "source": "sebi_lodr_2015.pdf",
+          "score": -1.0395715236663818,
+          "snippet": "CHAPTER IV: CONTINUOUS DISCLOSURES & SHAREHOLDING Regulation 30: Disclosure of events or information"
+        },
+        {
+          "source": "sebi_icdr_2018.pdf",
+          "score": -4.130858421325684,
+          "snippet": "ll be locked in for ninety (90) days from the date of allotment. (3) Minimum subscription requiremen"
+        }
+      ]
+    },
+    {
+      "id": "TC-02",
+      "query": "What triggers an open offer under SEBI SAST regulations?",
+      "hit": true,
+      "rank": 1,
+      "expected_source": "sebi_sast_regulations.pdf",
+      "top_retrieved": [
+        {
+          "source": "sebi_sast_regulations.pdf",
+          "score": 5.643561363220215,
+          "snippet": "CHAPTER II: OPEN OFFER TRIGGERS Regulation 3: Substantial acquisition of shares or voting rights. (1"
+        },
+        {
+          "source": "sebi_sast_regulations.pdf",
+          "score": 2.1099321842193604,
+          "snippet": "lic announcement of an open offer. (2) Regulation 3(2): Creeping Acquisition Limit. No acquirer who "
+        },
+        {
+          "source": "sebi_sast_regulations.pdf",
+          "score": 0.3140619993209839,
+          "snippet": "CHAPTER III: ESCROW ACCOUNT AND PRICING\nRegulation 17: Escrow account.\n(1) Not later than two workin"
+        }
+      ]
+    },
+    {
+      "id": "TC-03",
+      "query": "What is the minimum promoters contribution and lock-in period for IPO under SEBI ICDR?",
+      "hit": true,
+      "rank": 1,
+      "expected_source": "sebi_icdr_2018.pdf",
+      "top_retrieved": [
+        {
+          "source": "sebi_icdr_2018.pdf",
+          "score": 6.973155975341797,
+          "snippet": "CHAPTER II: PROMOTER CONTRIBUTION AND LOCK-IN Regulation 14 & 16: Minimum Promoters' Contribution an"
+        },
+        {
+          "source": "sebi_icdr_2018.pdf",
+          "score": 1.607208490371704,
+          "snippet": "offer (reduced from 3 years for eligible issuers). (3) Promoter holding in excess of 20% shall be lo"
+        },
+        {
+          "source": "sebi_icdr_2018.pdf",
+          "score": -2.483342170715332,
+          "snippet": "CHAPTER II: ANCHOR INVESTORS AND ALLOTMENT Regulation 17: Anchor Investor Allocation and Lock-in. (1"
+        }
+      ]
+    },
+    {
+      "id": "TC-04",
+      "query": "What are RBI guidelines on independent model validation and audit trails?",
+      "hit": true,
+      "rank": 1,
+      "expected_source": "rbi_model_risk_management.pdf",
+      "top_retrieved": [
+        {
+          "source": "rbi_model_risk_management.pdf",
+          "score": 1.6511974334716797,
+          "snippet": "CHAPTER III: GOVERNANCE AND AUDIT TRAILS Section 7: Model Inventory and Annual Review. (1) Regulated"
+        },
+        {
+          "source": "rbi_model_risk_management.pdf",
+          "score": -0.7247166037559509,
+          "snippet": "Validation. (1) All credit scoring, market risk, and algorithmic models must be independently valida"
+        },
+        {
+          "source": "rbi_model_risk_management.pdf",
+          "score": -1.8209717273712158,
+          "snippet": "CHAPTER II: MODEL DEVELOPMENT AND VALIDATION Section 4: Sound Model Development Practices. (1) Finan"
+        }
+      ]
+    },
+    {
+      "id": "TC-05",
+      "query": "What is the maximum penalty for failure to prevent personal data breach under DPDPA 2023?",
+      "hit": true,
+      "rank": 1,
+      "expected_source": "dpdpa_2023.pdf",
+      "top_retrieved": [
+        {
+          "source": "dpdpa_2023.pdf",
+          "score": 5.039877891540527,
+          "snippet": "CHAPTER VII: PENALTIES AND ADJUDICATION Section 33: Financial Penalties. The Data Protection Board m"
+        },
+        {
+          "source": "dpdpa_2023.pdf",
+          "score": 3.030757188796997,
+          "snippet": "cted Data Principals of a personal data breach under sub-section (6) of section 8: Penalty may exten"
+        },
+        {
+          "source": "dpdpa_2023.pdf",
+          "score": -2.3339176177978516,
+          "snippet": "THE DIGITAL PERSONAL DATA PROTECTION ACT, 2023 (NO. 22 OF 2023)\nCHAPTER I: PRELIMINARY AND APPLICABI"
+        }
+      ]
+    },
+    {
+      "id": "TC-06",
+      "query": "What is the notice period and approval requirement for related party transactions under LODR?",
+      "hit": true,
+      "rank": 1,
+      "expected_source": "sebi_lodr_2015.pdf",
+      "top_retrieved": [
+        {
+          "source": "sebi_lodr_2015.pdf",
+          "score": 5.8603515625,
+          "snippet": "CHAPTER IV: OBLIGATIONS OF LISTED ENTITY Regulation 23: Related Party Transactions. (1) The listed e"
+        },
+        {
+          "source": "sebi_lodr_2015.pdf",
+          "score": 5.117341995239258,
+          "snippet": "w for related party transactions shall be at least 21 days where required by law. (4) All material r"
+        },
+        {
+          "source": "sebi_icdr_2018.pdf",
+          "score": -9.0592041015625,
+          "snippet": "offer (reduced from 3 years for eligible issuers). (3) Promoter holding in excess of 20% shall be lo"
+        }
+      ]
+    },
+    {
+      "id": "TC-07",
+      "query": "What is the creeping acquisition limit under SEBI SAST?",
+      "hit": true,
+      "rank": 1,
+      "expected_source": "sebi_sast_regulations.pdf",
+      "top_retrieved": [
+        {
+          "source": "sebi_sast_regulations.pdf",
+          "score": 3.3125252723693848,
+          "snippet": "lic announcement of an open offer. (2) Regulation 3(2): Creeping Acquisition Limit. No acquirer who "
+        },
+        {
+          "source": "sebi_sast_regulations.pdf",
+          "score": 0.7434161305427551,
+          "snippet": "SECURITIES AND EXCHANGE BOARD OF INDIA (SUBSTANTIAL ACQUISITION OF SHARE\nCHAPTER I: DEFINITIONS AND "
+        },
+        {
+          "source": "sebi_sast_regulations.pdf",
+          "score": -5.233063697814941,
+          "snippet": "CHAPTER II: OPEN OFFER TRIGGERS Regulation 3: Substantial acquisition of shares or voting rights. (1"
+        }
+      ]
+    },
+    {
+      "id": "TC-08",
+      "query": "What are the lock-in periods for anchor investors under ICDR?",
+      "hit": true,
+      "rank": 1,
+      "expected_source": "sebi_icdr_2018.pdf",
+      "top_retrieved": [
+        {
+          "source": "sebi_icdr_2018.pdf",
+          "score": 6.025714874267578,
+          "snippet": "CHAPTER II: ANCHOR INVESTORS AND ALLOTMENT Regulation 17: Anchor Investor Allocation and Lock-in. (1"
+        },
+        {
+          "source": "sebi_icdr_2018.pdf",
+          "score": -0.21811170876026154,
+          "snippet": "CHAPTER II: PROMOTER CONTRIBUTION AND LOCK-IN Regulation 14 & 16: Minimum Promoters' Contribution an"
+        },
+        {
+          "source": "sebi_icdr_2018.pdf",
+          "score": -2.3246192932128906,
+          "snippet": "offer (reduced from 3 years for eligible issuers). (3) Promoter holding in excess of 20% shall be lo"
+        }
+      ]
+    }
+  ]
+}

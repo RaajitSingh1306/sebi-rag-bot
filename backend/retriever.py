@@ -16,6 +16,21 @@ def tokenize_for_bm25(text: str) -> List[str]:
     """Tokenize text into lowercase alphanumeric words for BM25 matching."""
     return re.findall(r'[a-zA-Z0-9_%]+', text.lower())
 
+_shared_client: Optional[QdrantClient] = None
+
+def get_shared_client(url: Optional[str] = None, api_key: Optional[str] = None) -> QdrantClient:
+    """Return a process-wide shared QdrantClient to avoid local file locking conflicts."""
+    global _shared_client
+    if _shared_client is not None:
+        return _shared_client
+    if url and api_key:
+        _shared_client = QdrantClient(url=url, api_key=api_key)
+    elif os.getenv("QDRANT_URL") and os.getenv("QDRANT_API_KEY"):
+        _shared_client = QdrantClient(url=os.getenv("QDRANT_URL"), api_key=os.getenv("QDRANT_API_KEY"))
+    else:
+        _shared_client = QdrantClient(path="./qdrant_data")
+    return _shared_client
+
 class HybridRetriever:
     def __init__(
         self,
@@ -28,15 +43,8 @@ class HybridRetriever:
         # 1. Setup Qdrant client
         if client is not None:
             self.client = client
-        elif url and api_key:
-            self.client = QdrantClient(url=url, api_key=api_key)
-        elif os.getenv("QDRANT_URL") and os.getenv("QDRANT_API_KEY"):
-            self.client = QdrantClient(
-                url=os.getenv("QDRANT_URL"),
-                api_key=os.getenv("QDRANT_API_KEY")
-            )
         else:
-            self.client = QdrantClient(path="./qdrant_data")
+            self.client = get_shared_client(url=url, api_key=api_key)
 
         # 2. Setup Embedding Model
         self.model_name = model_name or DEFAULT_EMBEDDING_MODEL
