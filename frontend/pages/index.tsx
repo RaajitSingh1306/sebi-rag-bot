@@ -104,16 +104,27 @@ export default function Home() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isLoading])
 
-  // Check health on mount
+  // Check health on mount — retries to survive Render free-tier cold starts (~30s)
   useEffect(() => {
-    async function checkHealth() {
-      try {
-        const res = await fetch(`${API_BASE}/health`)
-        if (res.ok) setHealthStatus('online')
-        else setHealthStatus('offline')
-      } catch (err) {
-        setHealthStatus('offline')
+    async function checkHealth(retries = 3, delayMs = 10000) {
+      for (let i = 0; i < retries; i++) {
+        try {
+          const controller = new AbortController()
+          const timeout = setTimeout(() => controller.abort(), 15000)
+          const res = await fetch(`${API_BASE}/health`, { signal: controller.signal })
+          clearTimeout(timeout)
+          if (res.ok) {
+            setHealthStatus('online')
+            return
+          }
+        } catch (err) {
+          // retry after delay unless last attempt
+        }
+        if (i < retries - 1) {
+          await new Promise((r) => setTimeout(r, delayMs))
+        }
       }
+      setHealthStatus('offline')
     }
 
     async function loadEvalSummary() {
