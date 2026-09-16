@@ -7,6 +7,7 @@ Endpoints:
 """
 import os
 import json
+import asyncio
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 import uvicorn
@@ -23,17 +24,28 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Enable CORS for Next.js frontend (local dev & production)
+# Enable CORS for Next.js frontend (local dev, production & preview Vercel deployments)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=[
+        "http://localhost:3000",
+        "https://sebi-rag-bot.vercel.app",
+    ],
+    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Compile agent graph once on startup
-graph = build_graph()
+# Lazy-load agent graph to keep startup fast and avoid loading models on /health
+_graph = None
+
+def get_graph():
+    """Lazy initialization of LangGraph workflow."""
+    global _graph
+    if _graph is None:
+        _graph = build_graph()
+    return _graph
 
 class QueryRequest(BaseModel):
     question: str = Field(..., min_length=2, example="What are SEBI's minimum public shareholding requirements?")
@@ -70,7 +82,12 @@ async def query(req: QueryRequest):
             "next_agent": "",
             "sources": []
         }
-        result = graph.invoke(inputs)
+        
+        # Run graph execution in a thread pool with 55s timeout (Render proxy limit is 60s)
+        result = await asyncio.wait_for(
+            asyncio.to_thread(get_graph().invoke, inputs),
+            timeout=55.0
+        )
 
         messages = result.get("messages", [])
         if not messages:
@@ -85,6 +102,8 @@ async def query(req: QueryRequest):
             sources=sources,
             agent_used=agent_used
         )
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Query timed out after 55 seconds.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Query execution error: {str(e)}")
 
@@ -107,8 +126,6 @@ def eval_summary():
         return data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error reading eval report: {str(e)}")
-
-
 
 if __name__ == "__main__":
     uvicorn.run("backend.main:app", host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))

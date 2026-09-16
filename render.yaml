@@ -15,3 +15,9 @@ services:
         value: llama-3.3-70b-versatile
       - key: P1_API_URL
         value: https://volatility-intelligence-platform.onrender.com
+      - key: USE_LOCAL_MODELS
+        value: "true"
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
