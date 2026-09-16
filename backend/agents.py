@@ -36,7 +36,7 @@ def get_llm(model: Optional[str] = None) -> Optional[ChatGroq]:
     api_key = os.getenv("GROQ_API_KEY", "").strip()
     if not api_key or api_key.startswith("gsk_your_"):
         return None
-    model_name = model or os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+    model_name = (model or os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")).strip()
     try:
         return ChatGroq(
             model=model_name,
@@ -45,6 +45,15 @@ def get_llm(model: Optional[str] = None) -> Optional[ChatGroq]:
         )
     except Exception as e:
         print(f"Warning: Failed to initialize ChatGroq ({model_name}): {e}")
+        if model_name != "openai/gpt-oss-120b":
+            try:
+                return ChatGroq(
+                    model="openai/gpt-oss-120b",
+                    api_key=api_key,
+                    temperature=0.1
+                )
+            except Exception:
+                pass
         return None
 
 def supervisor(state: AgentState) -> Dict[str, Any]:
@@ -147,11 +156,23 @@ def rag_agent(state: AgentState) -> Dict[str, Any]:
             }
         except Exception as e:
             print(f"RAG agent Groq LLM call failed: {e}")
+            try:
+                fallback_llm = get_llm(model="openai/gpt-oss-120b")
+                if fallback_llm:
+                    ai_msg = fallback_llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=user_prompt)])
+                    answer = ai_msg.content.strip()
+                    return {
+                        "messages": [AIMessage(content=answer)],
+                        "sources": sources_summary,
+                        "next_agent": "__end__"
+                    }
+            except Exception as e2:
+                print(f"RAG agent fallback LLM call failed: {e2}")
 
-    # Deterministic offline fallback
+    # Deterministic grounded extraction fallback
     top_chunk = retrieved_chunks[0]
     fallback_answer = (
-        f"[Offline / Grounded Context]\n"
+        f"[Grounded Regulatory Extract]\n"
         f"Based on {top_chunk.get('source', 'SEBI document')} (Page {top_chunk.get('page', 1)}):\n"
         f"{top_chunk.get('text', '')[:400]}...\n\n"
         f"Citations: {', '.join({c.get('source', 'unknown') for c in retrieved_chunks})}"

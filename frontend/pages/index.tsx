@@ -15,7 +15,8 @@ import {
   ChevronUp,
   ExternalLink,
   Copy,
-  Check
+  Check,
+  RefreshCw
 } from 'lucide-react'
 
 const API_BASE = (
@@ -98,6 +99,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false)
   const [loadingStep, setLoadingStep] = useState<string>('')
   const [healthStatus, setHealthStatus] = useState<'online' | 'offline' | 'checking'>('checking')
+  const [isCheckingHealth, setIsCheckingHealth] = useState(false)
   const [evalData, setEvalData] = useState<EvalReport | null>(null)
   const [showEvalModal, setShowEvalModal] = useState(false)
   const [expandedSources, setExpandedSources] = useState<{ [key: string]: boolean }>({})
@@ -109,33 +111,39 @@ export default function Home() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isLoading])
 
-  // Check health on mount — retries to survive Render free-tier cold starts (~30s)
-  useEffect(() => {
-    async function checkHealth(retries = 3, delayMs = 10000) {
-      for (let i = 0; i < retries; i++) {
-        try {
-          const controller = new AbortController()
-          const timeout = setTimeout(() => controller.abort(), 15000)
-          const res = await fetch(`${API_BASE}/health`, { signal: controller.signal })
-          clearTimeout(timeout)
-          if (res.ok) {
-            setHealthStatus('online')
-            return
-          }
-        } catch (err) {
-          // retry after delay unless last attempt
+  // Reusable health check function — handles Render cold starts (~35-50s)
+  const checkHealth = async (retries = 3, delayMs = 6000) => {
+    setIsCheckingHealth(true)
+    for (let i = 0; i < retries; i++) {
+      try {
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 12000)
+        const res = await fetch(`${API_BASE}/health`, { signal: controller.signal })
+        clearTimeout(timeout)
+        if (res.ok) {
+          setHealthStatus('online')
+          setIsCheckingHealth(false)
+          return true
         }
-        if (i < retries - 1) {
-          await new Promise((r) => setTimeout(r, delayMs))
-        }
+      } catch (err) {
+        // server might still be booting up
       }
-      setHealthStatus('offline')
+      if (i < retries - 1) {
+        await new Promise((r) => setTimeout(r, delayMs))
+      }
     }
+    setHealthStatus('offline')
+    setIsCheckingHealth(false)
+    return false
+  }
+
+  useEffect(() => {
+    let isMounted = true
 
     async function loadEvalSummary() {
       try {
         const res = await fetch(`${API_BASE}/eval-summary`)
-        if (res.ok) {
+        if (res.ok && isMounted) {
           const data = await res.json()
           if (!data.status || data.status !== 'pending') {
             setEvalData(data)
@@ -146,8 +154,31 @@ export default function Home() {
       }
     }
 
-    checkHealth()
+    // Initial check on mount (up to 4 attempts to survive cold-start)
+    checkHealth(4, 6000)
     loadEvalSummary()
+
+    // Background auto-reconnect interval:
+    // If Render is waking up, automatically flip to 'online' as soon as it's ready without requiring page reload
+    const pollInterval = setInterval(async () => {
+      if (!isMounted) return
+      try {
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 8000)
+        const res = await fetch(`${API_BASE}/health`, { signal: controller.signal })
+        clearTimeout(timeout)
+        if (res.ok && isMounted) {
+          setHealthStatus('online')
+        }
+      } catch (e) {
+        // quiet background heartbeat
+      }
+    }, 12000)
+
+    return () => {
+      isMounted = false
+      clearInterval(pollInterval)
+    }
   }, [])
 
   const handleSend = async (queryToSend?: string) => {
@@ -181,6 +212,7 @@ export default function Home() {
       }
 
       const data = await response.json()
+      setHealthStatus('online')
 
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -254,21 +286,41 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Health Badge */}
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-900/80 border border-gray-800 text-xs">
+            {/* Health Badge & Interactive Retry */}
+            <button
+              onClick={() => checkHealth(2, 3000)}
+              disabled={isCheckingHealth}
+              title={
+                healthStatus === 'online'
+                  ? 'API is online and healthy'
+                  : 'Backend may be cold starting. Click to test connection.'
+              }
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs transition-all ${
+                healthStatus === 'online'
+                  ? 'bg-gray-900/80 border-gray-800 cursor-default'
+                  : 'bg-rose-950/40 border-rose-800/60 hover:bg-rose-900/40 hover:border-rose-600/80 cursor-pointer active:scale-95'
+              }`}
+            >
               <span
                 className={`h-2 w-2 rounded-full ${
                   healthStatus === 'online'
                     ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]'
-                    : healthStatus === 'offline'
-                    ? 'bg-rose-500'
-                    : 'bg-amber-400 animate-pulse'
+                    : isCheckingHealth
+                    ? 'bg-amber-400 animate-pulse'
+                    : 'bg-rose-500 shadow-[0_0_6px_#f43f5e]'
                 }`}
               />
               <span className="text-gray-300 font-mono text-[11px] hidden sm:inline">
-                {healthStatus === 'online' ? 'API Online' : healthStatus === 'offline' ? 'API Offline' : 'Connecting...'}
+                {isCheckingHealth
+                  ? 'Connecting...'
+                  : healthStatus === 'online'
+                  ? 'API Online'
+                  : 'API Offline (Retry)'}
               </span>
-            </div>
+              {healthStatus === 'offline' && !isCheckingHealth && (
+                <RefreshCw className="h-3 w-3 text-rose-400 ml-0.5" />
+              )}
+            </button>
 
             {/* RAGAS Eval Button */}
             <button
