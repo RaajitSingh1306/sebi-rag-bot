@@ -1,6 +1,6 @@
 # SEBI RAG Bot — Multi-Agent Compliance & Volatility Intelligence
 
-[![CI Tests](https://img.shields.io/badge/tests-15%2F15%20passed-brightgreen)](#testing)
+[![CI Tests](https://img.shields.io/badge/tests-18%2F18%20passed-brightgreen)](#testing)
 [![RAGAS Faithfulness](https://img.shields.io/badge/RAGAS%20Faithfulness-90%25-emerald)](#evaluation--verification)
 [![Recall@5](https://img.shields.io/badge/Recall%405-100%25-blue)](#evaluation--verification)
 [![Deploy on Render](https://img.shields.io/badge/Deploy%20to-Render-46E3B7)](#deployment)
@@ -118,10 +118,11 @@ For compliance questions, the RAG agent runs a **hybrid search**:
 | Retrieval Method | How It Works | Why It's Needed |
 |---|---|---|
 | **Dense search** (Qdrant) | Encodes the query into a 384-dim vector via `all-MiniLM-L6-v2`, searches Qdrant Cloud for nearest neighbors | Finds semantically similar passages even when wording differs from the query |
-| **Sparse search** (BM25) | Tokenizes the query into keywords, scores every chunk using Okapi BM25 | Catches exact statutory terms like "Regulation 38", "LODR", "Section 8(1)(j)" that dense search may miss |
-| **Hybrid scoring** | `0.60 × dense_score + 0.40 × normalized_BM25_score` | Combines the strengths of both approaches into a single ranked list |
+| **Sparse search** (BM25) | Tokenizes the query into keywords (with stop-word filtering), scores every chunk using Okapi BM25 | Catches exact statutory terms like "Regulation 38", "LODR", "Section 8(1)(j)" without stop-word false positives |
+| **Hybrid scoring** | `0.60 × dense_score + 0.40 × normalized_BM25_score` | Combines both modalities; candidates missing dense search are penalized to eliminate spurious matches |
+| **Relevance Floor** | `RAG_RELEVANCE_THRESHOLD = 0.35` | Automatically rejects out-of-scope queries (e.g. weather/trivia) with an honest fallback instead of forced citations |
 
-The top 5 chunks are sent to Groq's LLM with a strict system prompt that forbids extrapolation. If the LLM is unavailable, the system returns the top chunk text directly as a **grounded extract** — never leaving the user with no answer.
+The top 5 chunks are sent to Groq's LLM with a strict system prompt that forbids extrapolation. If the top chunk's score is below `RAG_RELEVANCE_THRESHOLD`, the bot honestly informs the user that the information is not present. If the LLM is unavailable, the system returns the top chunk text directly as a **grounded extract** — never leaving the user with no answer.
 
 **3. Market Data (Quant Agent)**
 
@@ -139,6 +140,9 @@ The Next.js frontend at `sebi-rag-bot.vercel.app`:
 
 | Decision | Choice | Rationale |
 |---|---|---|
+| **Word-safe chunking** | `_word_safe_tail()` whole-word boundary | Prevents slicing mid-word (e.g., "Regulation 38" is never cut into "ulation 38") across chunk overlaps |
+| **Relevance floor** | `RAG_RELEVANCE_THRESHOLD` (0.35) | Guarantees top match quality; returns honest "I don't have that information" for out-of-scope queries |
+| **Stop-word filtering** | Custom English stop-word set in BM25 | Eliminates stop-word score inflation on irrelevant questions |
 | **Embedding model** | `all-MiniLM-L6-v2` via fastembed (ONNX) | ~50 MB RAM, no PyTorch required — critical for Render free tier's 512 MB limit |
 | **LLM provider** | Groq (free tier) | Zero-cost inference at ~500 tokens/sec; no credit card required |
 | **Vector store** | Qdrant Cloud | Managed service with free tier; avoids local storage issues on Render |
@@ -171,13 +175,13 @@ Audited across 10 benchmark Q&A pairs using Groq as LLM judge (`scripts/eval_rag
 
 ### Unit & Integration Tests
 
-15/15 tests passing across three test modules:
+18/18 tests passing across three test modules:
 
 | Module | Tests | Coverage |
 |---|---|---|
-| `test_retriever.py` | 5 | Hybrid retrieval, BM25 tokenization, empty query handling |
-| `test_agents.py` | 5 | Supervisor routing, RAG agent, quant agent, graph compilation |
-| `test_api.py` | 5 | Health endpoint, query endpoint, CORS, error handling |
+| `test_retriever.py` | 5 | Hybrid retrieval, BM25 tokenization, stop-word filtering, word-safe chunking, score sorting |
+| `test_agents.py` | 7 | Supervisor routing, RAG agent, quant agent, graph compilation, relevance threshold floor |
+| `test_api.py` | 6 | Health endpoint, query endpoint, CORS, error handling |
 
 ```bash
 pytest tests/ -v

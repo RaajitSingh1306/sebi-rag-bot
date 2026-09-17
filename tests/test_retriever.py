@@ -34,3 +34,24 @@ def test_regulatory_keyword_retrieval(retriever):
     combined_text = " ".join(r["text"].lower() for r in results)
     # Check that at least one key regulatory concept is retrieved
     assert any(term in combined_text for term in ["sebi", "lodr", "shareholding", "regulation", "percent", "25"])
+
+def test_word_safe_tail():
+    """Verify that _word_safe_tail never cuts words mid-word."""
+    from scripts.ingest_docs import _word_safe_tail
+    text = "Regulation 38: Minimum Public Shareholding"
+    # Slicing at 20 chars lands inside 'Minimum' -> should trim cleanly to 'Public Shareholding'
+    tail = _word_safe_tail(text, 20)
+    assert not tail.startswith("inimum")
+    assert tail == "Public Shareholding"
+
+def test_split_text_into_chunks_no_broken_words():
+    """Verify chunking splits cleanly without mid-word fragments."""
+    from scripts.ingest_docs import split_text_into_chunks
+    text = "Regulation 38 specifies Minimum Public Shareholding. Every listed company shall maintain at least 25 percent public shareholding."
+    chunks = split_text_into_chunks(text, chunk_size=60, chunk_overlap=25)
+    assert len(chunks) >= 2
+    for c in chunks:
+        # No chunk should start with a partial word fragment like 'ulation' or 'inimum'
+        words = c.split()
+        assert words[0] not in ["ulation", "inimum", "pecifies", "hareholding"]
+

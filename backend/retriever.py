@@ -13,9 +13,26 @@ COLLECTION_NAME = "sebi_rbi_docs"
 DEFAULT_EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
 USE_LOCAL_MODELS = os.getenv("USE_LOCAL_MODELS", "true").lower() != "false"
 
+STOP_WORDS = {
+    "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any",
+    "are", "as", "at", "be", "because", "been", "before", "being", "below", "between",
+    "both", "but", "by", "could", "did", "do", "does", "doing", "down", "during", "each",
+    "few", "for", "from", "further", "had", "has", "have", "having", "he", "her", "here",
+    "hers", "herself", "him", "himself", "his", "how", "i", "if", "in", "into", "is", "it",
+    "its", "itself", "just", "me", "more", "most", "my", "myself", "no", "nor", "not", "now",
+    "of", "off", "on", "once", "only", "or", "other", "our", "ours", "ourselves", "out",
+    "over", "own", "same", "she", "should", "so", "some", "such", "than", "that", "the",
+    "their", "theirs", "them", "themselves", "then", "there", "these", "they", "this",
+    "those", "through", "to", "too", "under", "until", "up", "very", "was", "we", "were",
+    "what", "when", "where", "which", "while", "who", "whom", "why", "with", "you", "your",
+    "yours", "yourself", "yourselves"
+}
+
 def tokenize_for_bm25(text: str) -> List[str]:
-    """Tokenize text into lowercase alphanumeric words for BM25 matching."""
-    return re.findall(r'[a-zA-Z0-9_%]+', text.lower())
+    """Tokenize text into lowercase alphanumeric words for BM25 matching, excluding common stop words."""
+    tokens = re.findall(r'[a-zA-Z0-9_%]+', text.lower())
+    filtered = [t for t in tokens if t not in STOP_WORDS]
+    return filtered if filtered else tokens
 
 _shared_client: Optional[QdrantClient] = None
 
@@ -198,11 +215,11 @@ class HybridRetriever:
             return []
 
         # 3. Hybrid scoring (60% dense + 40% sparse)
-        max_sparse = max([item["sparse_score"] for item in candidate_list] + [1e-5])
+        max_sparse = max([item["sparse_score"] for item in candidate_list] + [0.0])
         for item in candidate_list:
-            norm_sparse = item["sparse_score"] / max_sparse if max_sparse > 0 else 0.0
+            norm_sparse = (item["sparse_score"] / max_sparse) if max_sparse > 0 else 0.0
             dense_s = item["dense_score"]
-            if query_vector is not None and dense_s > 0:
+            if query_vector is not None:
                 item["rerank_score"] = float(0.60 * dense_s + 0.40 * norm_sparse)
             else:
                 item["rerank_score"] = float(norm_sparse)

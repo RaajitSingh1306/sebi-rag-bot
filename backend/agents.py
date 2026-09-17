@@ -22,6 +22,13 @@ class AgentState(TypedDict):
     next_agent: str
     sources: List[Dict[str, Any]]
 
+# Minimum hybrid rerank_score required before the top retrieved chunk is trusted enough
+# to answer from. Tune via env var if you find it too strict/loose after testing.
+# NOTE: this only catches genuinely POOR matches (low score). A query that shares
+# vocabulary with an unrelated clause (e.g. both mention "SEBI") can still score high
+# while not actually answering the question — this threshold will not catch that case.
+RAG_RELEVANCE_THRESHOLD = float(os.getenv("RAG_RELEVANCE_THRESHOLD", "0.35"))
+
 _retriever_instance: Optional[HybridRetriever] = None
 
 def get_retriever() -> HybridRetriever:
@@ -107,10 +114,16 @@ def rag_agent(state: AgentState) -> Dict[str, Any]:
     retriever = get_retriever()
     retrieved_chunks = retriever.retrieve(user_query, k=5)
 
-    if not retrieved_chunks:
+    top_score = retrieved_chunks[0].get("rerank_score", 0.0) if retrieved_chunks else 0.0
+
+    if not retrieved_chunks or top_score < RAG_RELEVANCE_THRESHOLD:
         return {
             "messages": [
-                AIMessage(content="I don't have that information in the retrieved regulatory documents. No relevant sections were found.")
+                AIMessage(content=(
+                    "I don't have that information in the regulatory documents I have access to. "
+                    "Try rephrasing with a specific regulation, section number, or keyword "
+                    "(e.g. SEBI LODR, SAST, ICDR, RBI model risk, DPDPA)."
+                ))
             ],
             "sources": [],
             "next_agent": "__end__"

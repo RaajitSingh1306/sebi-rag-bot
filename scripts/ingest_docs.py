@@ -40,6 +40,19 @@ def extract_text_from_pdf(pdf_path: Path) -> List[Dict[str, Any]]:
     doc.close()
     return pages
 
+def _word_safe_tail(text: str, chunk_overlap: int) -> str:
+    """Return the trailing `chunk_overlap` characters of text, trimmed back to a whole-word
+    boundary. Without this, a raw character slice can land mid-word (e.g. cutting
+    'Regulation' into 'ulation'), which then gets glued onto the front of the next chunk."""
+    if len(text) <= chunk_overlap:
+        return text.strip()
+    tail = text[-chunk_overlap:]
+    space_idx = tail.find(" ")
+    if space_idx != -1:
+        tail = tail[space_idx + 1:]  # drop the partial word before the first space
+    return tail.strip()
+
+
 def split_text_into_chunks(text: str, chunk_size: int = 512, chunk_overlap: int = 64) -> List[str]:
     """Split text into overlapping chunks using paragraph, sentence, and word boundaries."""
     if len(text) <= chunk_size:
@@ -57,8 +70,8 @@ def split_text_into_chunks(text: str, chunk_size: int = 512, chunk_overlap: int 
         else:
             if current_chunk:
                 chunks.append(current_chunk.strip())
-                overlap_text = current_chunk[-chunk_overlap:] if len(current_chunk) > chunk_overlap else ""
-                current_chunk = overlap_text + segment
+                overlap_text = _word_safe_tail(current_chunk, chunk_overlap)
+                current_chunk = (overlap_text + " " + segment.strip()) if overlap_text else segment
             else:
                 # If a single segment is too long, split by sentences or space
                 words = segment.split()
@@ -69,7 +82,10 @@ def split_text_into_chunks(text: str, chunk_size: int = 512, chunk_overlap: int 
                     else:
                         if temp:
                             chunks.append(temp.strip())
-                            temp = temp[-chunk_overlap:] + " " + w if len(temp) > chunk_overlap else w
+                            overlap_text = _word_safe_tail(temp, chunk_overlap)
+                            temp = (overlap_text + " " + w) if overlap_text else w
+                        else:
+                            temp = w
                 if temp:
                     current_chunk = temp
 

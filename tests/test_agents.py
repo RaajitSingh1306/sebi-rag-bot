@@ -45,6 +45,20 @@ def test_graph_rag_execution():
     assert len(answer) > 20
     assert "sources" in result
 
+def test_graph_rag_relevance_threshold_fallback():
+    """Verify out-of-scope queries below relevance threshold return graceful fallback without citations."""
+    graph = build_graph()
+    result = graph.invoke({
+        "messages": [HumanMessage(content="what is the weather in Mumbai today")],
+        "next_agent": "",
+        "sources": []
+    })
+    messages = result.get("messages", [])
+    assert len(messages) >= 2
+    answer = messages[-1].content
+    assert "I don't have that information" in answer
+    assert result.get("sources") == []
+
 def test_graph_quant_execution():
     """Verify graph execution for quant query returns answer gracefully even if P1 is offline."""
     graph = build_graph()
