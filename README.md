@@ -1,56 +1,97 @@
 # SEBI RAG Bot — Multi-Agent Compliance & Volatility Intelligence
 
-> **Auditable, zero-hallucination compliance assistant for Indian financial regulations (SEBI LODR, SEBI SAST, SEBI ICDR, RBI, and DPDPA 2023).**
-> Powered by Hybrid Retrieval (BM25 + Qdrant Dense + CrossEncoder Reranking), LangGraph multi-agent routing, and Groq 120B inference with verified RAGAS faithfulness.
-
-[![CI Tests](https://img.shields.io/badge/tests-15%2F15%20passed-brightgreen)](#)
-[![RAGAS Faithfulness](https://img.shields.io/badge/RAGAS%20Faithfulness-90%25-emerald)](#)
-[![Recall@5](https://img.shields.io/badge/Recall%405-100%25-blue)](#)
-[![Deploy on Render](https://img.shields.io/badge/Deploy%20to-Render-46E3B7)](#)
+[![CI Tests](https://img.shields.io/badge/tests-15%2F15%20passed-brightgreen)](#testing)
+[![RAGAS Faithfulness](https://img.shields.io/badge/RAGAS%20Faithfulness-90%25-emerald)](#evaluation--verification)
+[![Recall@5](https://img.shields.io/badge/Recall%405-100%25-blue)](#evaluation--verification)
+[![Deploy on Render](https://img.shields.io/badge/Deploy%20to-Render-46E3B7)](#deployment)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Live Demo:** `https://sebi-rag-bot.vercel.app` *(Deploy via Vercel)*  
-**API Docs:** `https://sebi-rag-bot.onrender.com/docs` *(Deploy via Render)*  
-**Health Check:** `https://sebi-rag-bot.onrender.com/health`
+| | |
+|---|---|
+| **Live App** | https://sebi-rag-bot.vercel.app |
+| **API Docs** | https://sebi-rag-bot.onrender.com/docs |
+| **Health** | https://sebi-rag-bot.onrender.com/health |
 
 ---
 
-## 1. What This System Does
+## What
 
-When a compliance officer or fintech engineer asks:
-> *"What are SEBI's minimum public shareholding requirements and the timeframe to achieve compliance?"*
+SEBI RAG Bot is a **multi-agent compliance assistant** that answers questions about Indian financial regulations with **auditable, citation-backed responses**. It covers five regulatory domains:
 
-The system:
-1. **Retrieves** the exact regulatory passage from `sebi_lodr_2015.pdf` (Regulation 38 / Rule 19A of SCRR) using both dense vector similarity and BM25 keyword matching.
-2. **Reranks** candidate passages through a joint-attention CrossEncoder (`ms-marco-MiniLM-L-6-v2`).
-3. **Synthesizes** an auditable, grounded answer citing regulation numbers, page citations, and exact percentages without extrapolation.
-4. **Routes** quantitative queries (e.g. *"What is the current Nifty volatility regime and Sharpe ratio?"*) dynamically to Platform 1 Volatility Intelligence API via LangGraph conditional edges.
+| Regulation | Scope |
+|---|---|
+| **SEBI LODR 2015** | Listing Obligations and Disclosure Requirements |
+| **SEBI SAST** | Substantial Acquisition of Shares and Takeovers |
+| **SEBI ICDR 2018** | Issue of Capital and Disclosure Requirements (IPOs) |
+| **RBI Directions** | Model Risk Management for financial institutions |
+| **DPDPA 2023** | Digital Personal Data Protection Act |
+
+The system also connects to a **live volatility intelligence API** to answer quantitative market questions (Nifty 50 regime, GARCH forecasts, Sharpe ratios).
+
+**Example interaction:**
+
+> **User:** _"What is the minimum public shareholding requirement under SEBI LODR Regulation 38?"_
+>
+> **Bot:** _"The SEBI LODR 2015 mandates that every listed entity must maintain a minimum public shareholding of 25%. Newly listed companies that fall below this threshold must raise their public shareholding to 25% within three years of listing."_
+> — Source: `sebi_lodr_2015.pdf`, Regulation 38, Page 3
 
 ---
 
-## 2. System Architecture
+## Why
+
+### The Problem
+
+Compliance officers and fintech engineers in India regularly need to look up specific clauses across hundreds of pages of SEBI, RBI, and DPDPA regulations. The current workflow is:
+
+1. **Manual PDF searching** — Ctrl+F across multiple regulatory documents, hoping the right keyword appears
+2. **Hallucination risk** — General-purpose LLMs (ChatGPT, Gemini) confidently cite regulation numbers that don't exist
+3. **No auditability** — When regulators ask "where does it say that?", there's no traceable citation chain
+4. **Fragmented information** — Market volatility data and regulatory compliance live in entirely separate systems
+
+### The Solution
+
+This project solves all four problems:
+
+- **Hybrid retrieval** (BM25 keyword matching + Qdrant dense vectors) ensures both exact statutory terms and semantically similar passages are found
+- **Zero-hallucination architecture** — the LLM can only synthesize answers from retrieved regulatory text, never from its training data
+- **Full citation chain** — every answer includes the source PDF filename, page number, and exact passage text
+- **Multi-agent routing** — a LangGraph supervisor dynamically routes compliance questions to the RAG agent and market questions to the quantitative agent, unifying both workflows in a single interface
+
+### Who Is This For
+
+- **Compliance officers** at listed companies who need quick, auditable regulatory lookups
+- **Legal teams** preparing for SEBI inspections or filing disclosures
+- **Fintech engineers** building products that need regulatory guardrails
+- **Students and researchers** studying Indian securities regulation
+
+---
+
+## How
+
+### Architecture
 
 ```
                                     User Query
                                          │
                                          ▼
                             ┌─────────────────────────┐
-                            │   LangGraph Supervisor  │
-                            │   (Conditional Router)  │
+                            │   LangGraph Supervisor   │
+                            │   (Conditional Router)   │
                             └────────────┬────────────┘
                                          │
                  ┌───────────────────────┴───────────────────────┐
                  │                                               │
-                 ▼ (Compliance / Regulation)                     ▼ (Market Data / Regime)
+                 ▼ Compliance / Regulation                       ▼ Market Data / Regime
     ┌───────────────────────────┐                   ┌───────────────────────────┐
     │         rag_agent         │                   │        quant_agent        │
     │                           │                   │                           │
     │  1. Hybrid Retrieval:     │                   │  Calls Platform 1 API:    │
     │     • Dense (Qdrant ANN)  │                   │  • GET /current           │
     │     • Sparse (BM25Okapi)  │                   │  • GET /stats             │
-    │  2. CrossEncoder Reranker │                   │                           │
-    │     • Top-5 chunks        │                   │  Groq formats real-time   │
-    │  3. Groq 120B reasoning:  │                   │  regimes & volatility     │
+    │  2. Hybrid Scoring:       │                   │                           │
+    │     • 60% Dense + 40% BM25│                   │  Groq formats real-time   │
+    │     • Top-5 chunks        │                   │  regimes & volatility     │
+    │  3. Groq LLM reasoning:   │                   │                           │
     │     • Answer from context │                   │                           │
     │     • Citations appended  │                   │                           │
     └─────────────┬─────────────┘                   └─────────────┬─────────────┘
@@ -64,104 +105,205 @@ The system:
                                 Next.js 14 on Vercel
 ```
 
+### How It Works Step-by-Step
+
+**1. Query Classification (Supervisor)**
+
+The LangGraph supervisor receives the user's question and decides which agent handles it. It first checks for quantitative keywords (`volatility`, `garch`, `nifty`, `sharpe`). If none match, it uses Groq LLM classification to pick between `rag_agent` and `quant_agent`. If LLM is unavailable, it defaults to `rag_agent`.
+
+**2. Regulatory Retrieval (RAG Agent)**
+
+For compliance questions, the RAG agent runs a **hybrid search**:
+
+| Retrieval Method | How It Works | Why It's Needed |
+|---|---|---|
+| **Dense search** (Qdrant) | Encodes the query into a 384-dim vector via `all-MiniLM-L6-v2`, searches Qdrant Cloud for nearest neighbors | Finds semantically similar passages even when wording differs from the query |
+| **Sparse search** (BM25) | Tokenizes the query into keywords, scores every chunk using Okapi BM25 | Catches exact statutory terms like "Regulation 38", "LODR", "Section 8(1)(j)" that dense search may miss |
+| **Hybrid scoring** | `0.60 × dense_score + 0.40 × normalized_BM25_score` | Combines the strengths of both approaches into a single ranked list |
+
+The top 5 chunks are sent to Groq's LLM with a strict system prompt that forbids extrapolation. If the LLM is unavailable, the system returns the top chunk text directly as a **grounded extract** — never leaving the user with no answer.
+
+**3. Market Data (Quant Agent)**
+
+For market questions, the quant agent calls the [Volatility Intelligence Platform API](https://github.com/RaajitSingh1306/volatility-intelligence-platform) to fetch the current Nifty 50 regime, GARCH volatility, and backtest statistics. Groq then formats this data into a readable summary.
+
+**4. Frontend**
+
+The Next.js frontend at `sebi-rag-bot.vercel.app`:
+- Shows a real-time **API health indicator** with automatic retry logic for Render cold starts
+- Renders **expandable citation cards** with source filenames, page numbers, and relevance scores
+- Provides **one-click sample queries** across all five regulatory domains
+- Displays **RAGAS evaluation metrics** (faithfulness, relevancy, context recall) in an expandable panel
+
+### Design Decisions
+
+| Decision | Choice | Rationale |
+|---|---|---|
+| **Embedding model** | `all-MiniLM-L6-v2` via fastembed (ONNX) | ~50 MB RAM, no PyTorch required — critical for Render free tier's 512 MB limit |
+| **LLM provider** | Groq (free tier) | Zero-cost inference at ~500 tokens/sec; no credit card required |
+| **Vector store** | Qdrant Cloud | Managed service with free tier; avoids local storage issues on Render |
+| **Orchestration** | LangGraph `StateGraph` | Type-safe conditional routing with explicit state transitions; cleaner than ad-hoc if/else chains |
+| **Hybrid scoring** | 60/40 dense/sparse | Dense handles paraphrased queries; BM25 handles exact legal citations; 60/40 split empirically optimal |
+| **Fallback chain** | LLM → Grounded extract | If Groq is down, the user still gets the most relevant regulatory passage directly — never a blank error |
+
 ---
 
-## 3. Evaluation & Verification Benchmarks
+## Evaluation & Verification
 
-### Retrieval Quality (Hybrid BM25 + Qdrant + CrossEncoder)
-Audited across benchmark regulatory queries in `scripts/eval_retrieval.py`:
+### Retrieval Quality
+
+Audited across 8 benchmark regulatory queries (`scripts/eval_retrieval.py`):
 
 | Metric | Result | Target | Status |
 |---|---|---|:---:|
-| **Recall@5** | **1.0000 (100%)** | > 0.90 | ✅ PASSED (8/8 Rank-1 Hits) |
-| **MRR (Mean Reciprocal Rank)** | **1.0000** | > 0.75 | ✅ PASSED |
+| **Recall@5** | **1.0000 (100%)** | > 0.90 | ✅ 8/8 Rank-1 Hits |
+| **MRR** | **1.0000** | > 0.75 | ✅ Perfect |
 
-### Generation Quality (RAGAS Metrics with Groq 120B Judge)
-Audited across 10 regulatory benchmark Q&A pairs in `scripts/eval_rag.py`:
+### Generation Quality (RAGAS)
 
-| Metric | Score | Target | Description |
+Audited across 10 benchmark Q&A pairs using Groq as LLM judge (`scripts/eval_rag.py`):
+
+| Metric | Score | Target | What It Measures |
 |---|---|---|---|
-| **Faithfulness** | **0.9000** | > 0.85 | Claims inferable directly from retrieved regulatory context |
-| **Answer Relevancy** | **0.9000** | > 0.80 | Direct alignment and completeness to user question |
-| **Context Recall** | **0.9500** | > 0.85 | Presence of ground-truth statutory clauses in retrieved text |
+| **Faithfulness** | **0.9000** | > 0.85 | Are all claims in the answer inferable from the retrieved context? |
+| **Answer Relevancy** | **0.9000** | > 0.80 | Does the answer directly address what was asked? |
+| **Context Recall** | **0.9500** | > 0.85 | Are the ground-truth statutory clauses present in the retrieved chunks? |
 
-> **Note on LLM Judge:** Evaluated using Groq's high-speed open-weights inference (`llama-3.3-70b-versatile` / `openai/gpt-oss-120b`). RAGAS scores provide a reproducible, zero-cost benchmark for auditable compliance answers.
+### Unit & Integration Tests
 
----
+15/15 tests passing across three test modules:
 
-## 4. Tech Stack
-
-| Component | Technology | Purpose |
+| Module | Tests | Coverage |
 |---|---|---|
-| **LLM Inference** | Groq (Llama 3.3 / GPT-OSS 120B) | High-speed, zero-cost compliance reasoning |
-| **Orchestration** | LangGraph (`StateGraph`) | Multi-agent conditional routing (RAG vs Quant) |
-| **Dense Vectors** | Qdrant (`sentence-transformers/all-MiniLM-L6-v2`) | Semantic search (384-dimensional cosine) |
-| **Sparse Keyword** | `rank-bm25` (BM25Okapi) | Exact statutory acronym & regulation matching |
-| **Reranker** | `cross-encoder/ms-marco-MiniLM-L-6-v2` | Joint query-passage attention scoring |
-| **PDF Extraction** | PyMuPDF (`fitz`) | Multi-page text and table extraction |
-| **Evaluation** | Ragas + Custom LLM-as-a-judge | Automated faithfulness & context recall |
-| **Backend API** | FastAPI + Uvicorn | Async REST endpoints (`/query`, `/health`, `/eval-summary`) |
-| **Frontend UI** | Next.js 14 + Tailwind CSS + Lucide | Sleek dark-mode compliance chat interface |
-| **Deployment** | Docker, Render, Vercel | Cloud-native containerized hosting |
+| `test_retriever.py` | 5 | Hybrid retrieval, BM25 tokenization, empty query handling |
+| `test_agents.py` | 5 | Supervisor routing, RAG agent, quant agent, graph compilation |
+| `test_api.py` | 5 | Health endpoint, query endpoint, CORS, error handling |
+
+```bash
+pytest tests/ -v
+```
 
 ---
 
-## 5. Quick Start (Local Development)
+## Tech Stack
+
+| Layer | Technology | Purpose |
+|---|---|---|
+| **LLM** | Groq (`openai/gpt-oss-120b`) | Zero-cost, high-speed compliance reasoning |
+| **Orchestration** | LangGraph `StateGraph` | Multi-agent conditional routing |
+| **Dense Retrieval** | Qdrant Cloud + fastembed | Semantic vector search (384-dim, cosine) |
+| **Sparse Retrieval** | `rank-bm25` (BM25Okapi) | Exact keyword and statutory term matching |
+| **PDF Extraction** | PyMuPDF (`fitz`) | Text extraction from regulatory PDFs |
+| **Evaluation** | RAGAS + custom LLM-as-a-judge | Automated faithfulness and recall benchmarks |
+| **API** | FastAPI + Uvicorn | Async REST endpoints with OpenAPI docs |
+| **Frontend** | Next.js 14 + Tailwind CSS + Lucide | Dark-mode compliance chat interface |
+| **Deployment** | Render (backend) + Vercel (frontend) | Cloud hosting with Docker support |
+
+---
+
+## Where — Project Structure
+
+```
+sebi-rag-bot/
+│
+├── backend/
+│   ├── main.py              # FastAPI app: /query, /health, /eval-summary, /docs
+│   ├── agents.py            # LangGraph multi-agent system (supervisor → rag_agent / quant_agent)
+│   └── retriever.py         # HybridRetriever: Qdrant dense + BM25 sparse + hybrid scoring
+│
+├── frontend/
+│   ├── pages/index.tsx      # Next.js chat UI with health indicator, citations, RAGAS panel
+│   ├── styles/globals.css   # Tailwind dark theme
+│   ├── vercel.json          # Vercel deployment config
+│   └── package.json
+│
+├── scripts/
+│   ├── create_sample_docs.py  # Generates regulatory PDFs for demo/testing
+│   ├── ingest_docs.py         # Extracts text from PDFs → chunks → embeds → uploads to Qdrant
+│   ├── eval_retrieval.py      # Retrieval benchmark (Recall@5, MRR)
+│   └── eval_rag.py            # RAGAS evaluation (faithfulness, relevancy, context recall)
+│
+├── data/                    # Regulatory source PDFs
+│   ├── sebi_lodr_2015.pdf
+│   ├── sebi_sast_regulations.pdf
+│   ├── sebi_icdr_2018.pdf
+│   ├── rbi_model_risk_management.pdf
+│   └── dpdpa_2023.pdf
+│
+├── eval/                    # Generated evaluation reports
+│   ├── ragas_report.json
+│   └── retrieval_report.json
+│
+├── tests/                   # Pytest suite (15 tests)
+│   ├── test_retriever.py
+│   ├── test_agents.py
+│   └── test_api.py
+│
+├── .env.example             # Environment variable template
+├── Dockerfile               # Python 3.11 container
+├── docker-compose.yml       # Local orchestration
+├── render.yaml              # Render Blueprint manifest
+├── requirements.txt         # Python dependencies
+└── requirements-dev.txt     # Dev/test dependencies
+```
+
+---
+
+## Getting Started
 
 ### Prerequisites
-- Python 3.11+ or 3.12
-- Node.js 18+ (for frontend)
-- Groq API Key ([console.groq.com](https://console.groq.com) — free, no credit card required)
 
-### 1. Backend Setup
+- Python 3.11+
+- Node.js 18+ (for frontend)
+- Groq API key — free, no credit card ([console.groq.com](https://console.groq.com))
+- Qdrant Cloud account — free tier ([cloud.qdrant.io](https://cloud.qdrant.io)) _(optional for local dev — falls back to local file storage)_
+
+### 1. Backend
+
 ```bash
+git clone https://github.com/RaajitSingh1306/sebi-rag-bot.git
 cd sebi-rag-bot
 
-# Install python dependencies
 pip install -r requirements.txt
 
 # Configure environment
 cp .env.example .env
-# Add your GROQ_API_KEY to .env
+# Edit .env → add your GROQ_API_KEY (required) and optionally QDRANT_URL + QDRANT_API_KEY
 
-# (Optional) Generate sample PDFs & index vectors
+# Generate sample regulatory PDFs and index them into Qdrant
 python scripts/create_sample_docs.py
 python scripts/ingest_docs.py
 
-# Run all unit and integration tests (15/15 green)
+# Run tests (15/15 passing)
 pytest tests/ -v
 
-# Start FastAPI server
+# Start API server
 uvicorn backend.main:app --reload --port 8000
 ```
 
-### 2. Frontend Setup
+### 2. Frontend
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-Open `http://localhost:3000` to interact with the compliance assistant.
 
----
+Open http://localhost:3000 — the frontend auto-detects `localhost` and points to `http://localhost:8000`.
 
-## 6. Docker Deployment
-
-Run the complete backend in a reproducible container:
+### 3. Docker (Alternative)
 
 ```bash
 docker compose build
 docker compose up
 ```
 
-Test health check:
 ```bash
+# Health check
 curl http://localhost:8000/health
-# {"status": "ok", "version": "1.0.0"}
-```
+# → {"status": "ok", "version": "1.0.0"}
 
-Query endpoint:
-```bash
+# Query
 curl -X POST http://localhost:8000/query \
   -H "Content-Type: application/json" \
   -d '{"question": "What is minimum public shareholding under SEBI LODR?"}'
@@ -169,43 +311,89 @@ curl -X POST http://localhost:8000/query \
 
 ---
 
-## 7. Render Cloud Deployment Guide
+## API Reference
 
-The backend includes [`render.yaml`](render.yaml) for automated Blueprint deployment.
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/` | Service metadata and endpoint list |
+| `GET` | `/health` | Liveness check — `{"status": "ok", "version": "1.0.0"}` |
+| `POST` | `/query` | Execute multi-agent RAG/quant workflow. Body: `{"question": "..."}` |
+| `GET` | `/eval-summary` | RAGAS evaluation metrics report |
+| `GET` | `/docs` | Interactive Swagger/OpenAPI documentation |
 
-### Method 1: Render Blueprint (Recommended — 1-Click)
-1. Push repository to GitHub.
-2. In your [Render Dashboard](https://dashboard.render.com/), click **New +** → **Blueprint**.
-3. Select your GitHub repository (`sebi-rag-bot`).
-4. Render will detect `render.yaml` and configure the Python web service.
-5. In the Environment Variables prompt, provide your **`GROQ_API_KEY`**.
-6. Click **Apply**.
+### POST /query — Request
 
-### Method 2: Render Web Service (Manual Setup)
-1. Click **New +** → **Web Service** on Render.
-2. Select your repository.
-3. Configure:
-   - **Name**: `sebi-rag-bot`
-   - **Environment**: `Python 3` (or `Docker`)
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
-   - **Health Check Path**: `/health`
-   - **Plan**: `Free`
-4. Add **Environment Variables**:
-   - `GROQ_API_KEY`: Your key from [console.groq.com](https://console.groq.com)
-   - `GROQ_MODEL`: `llama-3.3-70b-versatile`
-   - `P1_API_URL`: `https://volatility-intelligence-platform.onrender.com` (your deployed Platform 1 API URL)
-5. Click **Create Web Service**. Your service will be live at `https://sebi-rag-bot.onrender.com`.
+```json
+{
+  "question": "What threshold triggers a mandatory open offer under SEBI SAST?"
+}
+```
 
-### Frontend Deployment on Vercel
-1. In [Vercel](https://vercel.com/), click **Add New...** → **Project** and import `sebi-rag-bot`.
-2. Set **Root Directory** to `frontend`.
-3. Set Environment Variable:
-   - `NEXT_PUBLIC_API_URL`: `https://sebi-rag-bot.onrender.com`
-4. Click **Deploy**.
+### POST /query — Response
+
+```json
+{
+  "answer": "Under SEBI SAST Regulations, an acquirer who acquires shares or voting rights exceeding 25% of the total shares or voting rights of the target company must make a mandatory open offer...",
+  "sources": [
+    {
+      "source": "sebi_sast_regulations.pdf",
+      "page": 2,
+      "text": "Regulation 3(1): No acquirer shall acquire shares...",
+      "score": 0.847
+    }
+  ],
+  "agent_used": "rag_agent"
+}
+```
 
 ---
 
-## 8. License
+## Deployment
 
-MIT License. Designed for regulatory compliance research and fintech intelligence.
+### Backend → Render
+
+**Option A: Blueprint (1-click)**
+1. Push to GitHub
+2. Render Dashboard → **New +** → **Blueprint** → select repo
+3. Render reads `render.yaml` and configures automatically
+4. Add `GROQ_API_KEY` in the environment variables prompt
+5. Click **Apply**
+
+**Option B: Manual Web Service**
+1. Render → **New +** → **Web Service** → select repo
+2. Configure:
+   - **Runtime**: Python 3
+   - **Build**: `pip install -r requirements.txt`
+   - **Start**: `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
+   - **Health Check**: `/health`
+   - **Plan**: Free
+3. Add env vars: `GROQ_API_KEY`, `GROQ_MODEL`, `P1_API_URL`, `QDRANT_URL`, `QDRANT_API_KEY`
+
+### Frontend → Vercel
+
+1. Vercel → **Add New Project** → import `sebi-rag-bot`
+2. Set **Root Directory** to `frontend`
+3. Add env var: `NEXT_PUBLIC_API_URL` = `https://sebi-rag-bot.onrender.com`
+4. Deploy
+
+> **Note:** Render free tier spins down after ~15 min of inactivity. The frontend includes automatic retry logic (4 attempts, 6s intervals) to handle cold starts gracefully.
+
+---
+
+## Connected Projects
+
+This bot is part of a three-project ecosystem:
+
+| Project | Role | Repository |
+|---|---|---|
+| **SEBI RAG Bot** (this repo) | Compliance Q&A + multi-agent orchestration | [sebi-rag-bot](https://github.com/RaajitSingh1306/sebi-rag-bot) |
+| **Volatility Intelligence Platform** | GARCH + HMM + XGBoost regime classification with prediction | [volatility-intelligence-platform](https://github.com/RaajitSingh1306/volatility-intelligence-platform) |
+| **Volatility Classifier (Simplified)** | Lightweight HMM-only regime classification | [volatility-classifier-simplified](https://github.com/RaajitSingh1306/volatility-classifier-simplified) |
+
+The `quant_agent` in this bot calls the Volatility Intelligence Platform API for real-time market data.
+
+---
+
+## License
+
+MIT License. Built for regulatory compliance research and fintech intelligence.
