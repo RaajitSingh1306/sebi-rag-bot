@@ -386,15 +386,18 @@ curl -X POST http://localhost:8000/query \
 
 ## Connected Projects
 
-This bot is part of a three-project ecosystem:
+This multi-agent system connects directly to the quantitative finance and machine learning ecosystem:
 
 | Project | Role | Repository |
 |---|---|---|
-| **SEBI RAG Bot** (this repo) | Compliance Q&A + multi-agent orchestration | [sebi-rag-bot](https://github.com/RaajitSingh1306/sebi-rag-bot) |
-| **Volatility Intelligence Platform** | GARCH + HMM + XGBoost regime classification with prediction | [volatility-intelligence-platform](https://github.com/RaajitSingh1306/volatility-intelligence-platform) |
-| **Volatility Classifier (Simplified)** | Lightweight HMM-only regime classification | [volatility-classifier-simplified](https://github.com/RaajitSingh1306/volatility-classifier-simplified) |
+| **SEBI RAG Bot** (This Repo) | Compliance Q&A + multi-agent regulatory orchestration | [sebi-rag-bot](https://github.com/RaajitSingh1306/sebi-rag-bot) |
+| **Volatility Intelligence Platform** | Production GARCH + HMM + XGBoost market intelligence API | [volatility-intelligence-platform](https://github.com/RaajitSingh1306/volatility-intelligence-platform) |
+| **Credit Default Predictor** | Loan default prediction & TreeSHAP explainability engine | [Credit-Default-Predictor](https://github.com/RaajitSingh1306/Credit-Default-Predictor) |
+| **NSEI Daily Stock Pipeline** | Financial data lakehouse & feature store (Airflow, Spark, DuckDB) | [NSEI-Daily-Stock-Pipeline](https://github.com/RaajitSingh1306/NSEI-Daily-Stock-Pipeline) |
+| **Nifty Sector Rotation** | Momentum strategy on Indian sector indices | [Nifty-Sector-Rotation](https://github.com/RaajitSingh1306/Nifty-Sector-Rotation) |
+| **Volatility Classifier (Simplified)** | *Superseded (v2)*: Single-asset HMM + GARCH refactor | [volatility-classifier-simplified](https://github.com/RaajitSingh1306/volatility-classifier-simplified) |
 
-The `quant_agent` in this bot calls the Volatility Intelligence Platform API for real-time market data.
+The `quant_agent` in this bot calls the [Volatility Intelligence Platform](https://github.com/RaajitSingh1306/volatility-intelligence-platform) API in real time to fetch current market regimes, GARCH volatility, and predictive probability distributions.
 
 ---
 
