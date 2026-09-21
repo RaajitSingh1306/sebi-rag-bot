@@ -144,7 +144,7 @@ The Next.js frontend at `sebi-rag-bot.vercel.app`:
 | **Relevance floor** | `RAG_RELEVANCE_THRESHOLD` (0.35) | Guarantees top match quality; returns honest "I don't have that information" for out-of-scope queries |
 | **Stop-word filtering** | Custom English stop-word set in BM25 | Eliminates stop-word score inflation on irrelevant questions |
 | **Embedding model** | `all-MiniLM-L6-v2` via fastembed (ONNX) | ~50 MB RAM, no PyTorch required — critical for Render free tier's 512 MB limit |
-| **LLM provider** | Groq (free tier) | Zero-cost inference at ~500 tokens/sec; no credit card required |
+| **LLM provider** | Groq (`openai/gpt-oss-120b`) | Zero-cost inference at ~500 tokens/sec; no credit card required |
 | **Vector store** | Qdrant Cloud | Managed service with free tier; avoids local storage issues on Render |
 | **Orchestration** | LangGraph `StateGraph` | Type-safe conditional routing with explicit state transitions; cleaner than ad-hoc if/else chains |
 | **Hybrid scoring** | 60/40 dense/sparse | Dense handles paraphrased queries; BM25 handles exact legal citations; 60/40 split empirically optimal |
