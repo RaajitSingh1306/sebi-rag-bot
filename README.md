@@ -1,76 +1,70 @@
 # SEBI RAG Bot — Multi-Agent Compliance & Volatility Intelligence
 
-[![CI Tests](https://img.shields.io/badge/tests-18%2F18%20passed-brightgreen)](#testing)
-[![RAGAS Faithfulness](https://img.shields.io/badge/RAGAS%20Faithfulness-90%25-emerald)](#evaluation--verification)
-[![Recall@5](https://img.shields.io/badge/Recall%405-100%25-blue)](#evaluation--verification)
-[![Deploy on Render](https://img.shields.io/badge/Deploy%20to-Render-46E3B7)](#deployment)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI Tests](https://img.shields.io/badge/tests-18%2F18%20passed-brightgreen)](#8-results--evaluation)
+[![RAGAS Faithfulness](https://img.shields.io/badge/RAGAS%20Faithfulness-90%25-emerald)](#8-results--evaluation)
+[![Recall@5](https://img.shields.io/badge/Recall%405-100%25-blue)](#8-results--evaluation)
+[![Deploy on Render](https://img.shields.io/badge/Deploy%20to-Render-46E3B7)](#12-deployment)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](#16-license--disclaimer)
 
-| | |
+| Resource | URL |
 |---|---|
-| **Live App** | https://sebi-rag-bot.vercel.app |
-| **API Docs** | https://sebi-rag-bot.onrender.com/docs |
-| **Health** | https://sebi-rag-bot.onrender.com/health |
+| **Live Web Application** | [https://sebi-rag-bot.vercel.app](https://sebi-rag-bot.vercel.app) |
+| **Interactive API Docs** | [https://sebi-rag-bot.onrender.com/docs](https://sebi-rag-bot.onrender.com/docs) |
+| **Health Check Endpoint** | [https://sebi-rag-bot.onrender.com/health](https://sebi-rag-bot.onrender.com/health) |
+
+A production-grade **multi-agent compliance and quantitative market intelligence platform** that provides auditable, citation-backed answers to queries on Indian securities, corporate governance, banking risk, and data privacy regulations. Built with **LangGraph**, **Qdrant Cloud**, **BM25Okapi**, **PyMuPDF**, and **Groq (`openai/gpt-oss-120b`)**, the system pairs dense semantic search with sparse keyword matching, enforces a strict anti-hallucination relevance floor, and dynamically queries the [Volatility Intelligence Platform](https://github.com/RaajitSingh1306/volatility-intelligence-platform) for live market risk intelligence.
 
 ---
 
-## What
+## Table of Contents
 
-SEBI RAG Bot is a **multi-agent compliance assistant** that answers questions about Indian financial regulations with **auditable, citation-backed responses**. It covers five regulatory domains:
-
-| Regulation | Scope |
-|---|---|
-| **SEBI LODR 2015** | Listing Obligations and Disclosure Requirements |
-| **SEBI SAST** | Substantial Acquisition of Shares and Takeovers |
-| **SEBI ICDR 2018** | Issue of Capital and Disclosure Requirements (IPOs) |
-| **RBI Directions** | Model Risk Management for financial institutions |
-| **DPDPA 2023** | Digital Personal Data Protection Act |
-
-The system also connects to a **live volatility intelligence API** to answer quantitative market questions (Nifty 50 regime, GARCH forecasts, Sharpe ratios).
-
-**Example interaction:**
-
-> **User:** _"What is the minimum public shareholding requirement under SEBI LODR Regulation 38?"_
->
-> **Bot:** _"The SEBI LODR 2015 mandates that every listed entity must maintain a minimum public shareholding of 25%. Newly listed companies that fall below this threshold must raise their public shareholding to 25% within three years of listing."_
-> — Source: `sebi_lodr_2015.pdf`, Regulation 38, Page 3
+- [1. What This Project Does](#1-what-this-project-does)
+- [2. Why It Was Built](#2-why-it-was-built)
+- [3. System Architecture](#3-system-architecture)
+- [4. Tech Stack & Libraries](#4-tech-stack--libraries)
+- [5. Data](#5-data)
+- [6. Step-by-Step Pipeline](#6-step-by-step-pipeline)
+- [7. Problems Faced & How We Solved Them](#7-problems-faced--how-we-solved-them)
+- [8. Results & Evaluation](#8-results--evaluation)
+- [9. Project Structure](#9-project-structure)
+- [10. Getting Started](#10-getting-started)
+- [11. API Reference](#11-api-reference)
+- [12. Deployment](#12-deployment)
+- [13. Connected Portfolio Projects](#13-connected-portfolio-projects)
+- [14. Limitations & Known Issues](#14-limitations--known-issues)
+- [15. Roadmap / Future Expansion](#15-roadmap--future-expansion)
+- [16. License & Disclaimer](#16-license--disclaimer)
 
 ---
 
-## Why
+## 1. What This Project Does
 
-### The Problem
+The platform acts as an automated regulatory counsel and quant research companion:
 
-Compliance officers and fintech engineers in India regularly need to look up specific clauses across hundreds of pages of SEBI, RBI, and DPDPA regulations. The current workflow is:
-
-1. **Manual PDF searching** — Ctrl+F across multiple regulatory documents, hoping the right keyword appears
-2. **Hallucination risk** — General-purpose LLMs (ChatGPT, Gemini) confidently cite regulation numbers that don't exist
-3. **No auditability** — When regulators ask "where does it say that?", there's no traceable citation chain
-4. **Fragmented information** — Market volatility data and regulatory compliance live in entirely separate systems
-
-### The Solution
-
-This project solves all four problems:
-
-- **Hybrid retrieval** (BM25 keyword matching + Qdrant dense vectors) ensures both exact statutory terms and semantically similar passages are found
-- **Zero-hallucination architecture** — the LLM can only synthesize answers from retrieved regulatory text, never from its training data
-- **Full citation chain** — every answer includes the source PDF filename, page number, and exact passage text
-- **Multi-agent routing** — a LangGraph supervisor dynamically routes compliance questions to the RAG agent and market questions to the quantitative agent, unifying both workflows in a single interface
-
-### Who Is This For
-
-- **Compliance officers** at listed companies who need quick, auditable regulatory lookups
-- **Legal teams** preparing for SEBI inspections or filing disclosures
-- **Fintech engineers** building products that need regulatory guardrails
-- **Students and researchers** studying Indian securities regulation
+- **Auditable Regulatory Synthesis**: Formulates exact, grounded answers across five major Indian financial and data privacy statutes:
+  - **SEBI LODR (2015)**: Listing Obligations and Disclosure Requirements.
+  - **SEBI SAST (2011)**: Substantial Acquisition of Shares and Takeovers.
+  - **SEBI ICDR (2018)**: Issue of Capital and Disclosure Requirements (IPOs).
+  - **RBI Master Directions**: Model Risk Management for Banks and NBFCs.
+  - **DPDPA (2023)**: Digital Personal Data Protection Act.
+- **Traceable Citation Attribution**: Every answer is paired with metadata: source document, regulation number, page number, and similarity score.
+- **Dynamic Multi-Agent Routing (LangGraph)**: Automatically routes incoming queries to either the compliance RAG pipeline or the quantitative volatility agent.
+- **Real-Time Market Context Integration**: Interacts directly with the Volatility Intelligence Platform API to fetch live Nifty 50 volatility regimes, GARCH estimates, and Sharpe ratios.
+- **Anti-Hallucination Guardrails**: Employs an explicit relevance threshold ($0.35$); out-of-scope queries trigger an honest fallback rather than fabricated answers.
 
 ---
 
-## How
+## 2. Why It Was Built
 
-### Architecture
+- **Manual Regulatory Inefficiency**: Legal and compliance teams at listed entities spend hours manually navigating dense regulatory gazettes, cross-referencing amendments, and searching keyword variants.
+- **The LLM Hallucination Trap**: General-purpose LLMs (such as base ChatGPT or Gemini) frequently invent regulation numbers, misquote disclosure timelines, or produce plausible-sounding but legally invalid citations.
+- **Bridging Compliance with Quantitative Risk**: Regulatory decisions (e.g. margin requirements, takeover open offers, risk-weighted capital adequacy) are inextricably tied to prevailing market volatility. Integrating compliance RAG with quantitative volatility APIs unifies these workflows into a single interface.
 
-```
+---
+
+## 3. System Architecture
+
+```text
                                     User Query
                                          │
                                          ▼
@@ -81,247 +75,216 @@ This project solves all four problems:
                                          │
                  ┌───────────────────────┴───────────────────────┐
                  │                                               │
-                 ▼ Compliance / Regulation                       ▼ Market Data / Regime
+                 ▼ Compliance / Statutory                        ▼ Market Volatility / Regime
     ┌───────────────────────────┐                   ┌───────────────────────────┐
     │         rag_agent         │                   │        quant_agent        │
     │                           │                   │                           │
-    │  1. Hybrid Retrieval:     │                   │  Calls Platform 1 API:    │
+    │  1. Hybrid Retrieval:     │                   │  Calls VIP REST API:      │
     │     • Dense (Qdrant ANN)  │                   │  • GET /current           │
     │     • Sparse (BM25Okapi)  │                   │  • GET /stats             │
-    │  2. Hybrid Scoring:       │                   │                           │
+    │  2. Hybrid Fusion:        │                   │                           │
     │     • 60% Dense + 40% BM25│                   │  Groq formats real-time   │
     │     • Top-5 chunks        │                   │  regimes & volatility     │
-    │  3. Groq LLM reasoning:   │                   │                           │
-    │     • Answer from context │                   │                           │
+    │  3. Relevance Floor (0.35)│                   │                           │
+    │  4. Groq LLM reasoning:   │                   │                           │
+    │     • Grounded extraction │                   │                           │
     │     • Citations appended  │                   │                           │
     └─────────────┬─────────────┘                   └─────────────┬─────────────┘
                   │                                               │
                   └───────────────────────┬───────────────────────┘
                                           ▼
-                               FastAPI on Render (:8000)
+                               FastAPI Backend (:8000)
                                  POST /query  (JSON)
                                           │
                                           ▼
-                                Next.js 14 on Vercel
+                             Next.js 14 Frontend (:3000)
+                             (Tailwind Dark Mode Console)
 ```
-
-### How It Works Step-by-Step
-
-**1. Query Classification (Supervisor)**
-
-The LangGraph supervisor receives the user's question and decides which agent handles it. It first checks for quantitative keywords (`volatility`, `garch`, `nifty`, `sharpe`). If none match, it uses Groq LLM classification to pick between `rag_agent` and `quant_agent`. If LLM is unavailable, it defaults to `rag_agent`.
-
-**2. Regulatory Retrieval (RAG Agent)**
-
-For compliance questions, the RAG agent runs a **hybrid search**:
-
-| Retrieval Method | How It Works | Why It's Needed |
-|---|---|---|
-| **Dense search** (Qdrant) | Encodes the query into a 384-dim vector via `all-MiniLM-L6-v2`, searches Qdrant Cloud for nearest neighbors | Finds semantically similar passages even when wording differs from the query |
-| **Sparse search** (BM25) | Tokenizes the query into keywords (with stop-word filtering), scores every chunk using Okapi BM25 | Catches exact statutory terms like "Regulation 38", "LODR", "Section 8(1)(j)" without stop-word false positives |
-| **Hybrid scoring** | `0.60 × dense_score + 0.40 × normalized_BM25_score` | Combines both modalities; candidates missing dense search are penalized to eliminate spurious matches |
-| **Relevance Floor** | `RAG_RELEVANCE_THRESHOLD = 0.35` | Automatically rejects out-of-scope queries (e.g. weather/trivia) with an honest fallback instead of forced citations |
-
-The top 5 chunks are sent to Groq's LLM with a strict system prompt that forbids extrapolation. If the top chunk's score is below `RAG_RELEVANCE_THRESHOLD`, the bot honestly informs the user that the information is not present. If the LLM is unavailable, the system returns the top chunk text directly as a **grounded extract** — never leaving the user with no answer.
-
-**3. Market Data (Quant Agent)**
-
-For market questions, the quant agent calls the [Volatility Intelligence Platform API](https://github.com/RaajitSingh1306/volatility-intelligence-platform) to fetch the current Nifty 50 regime, GARCH volatility, and backtest statistics. Groq then formats this data into a readable summary.
-
-**4. Frontend**
-
-The Next.js frontend at `sebi-rag-bot.vercel.app`:
-- Shows a real-time **API health indicator** with automatic retry logic for Render cold starts
-- Renders **expandable citation cards** with source filenames, page numbers, and relevance scores
-- Provides **one-click sample queries** across all five regulatory domains
-- Displays **RAGAS evaluation metrics** (faithfulness, relevancy, context recall) in an expandable panel
-
-### Design Decisions
-
-| Decision | Choice | Rationale |
-|---|---|---|
-| **Word-safe chunking** | `_word_safe_tail()` whole-word boundary | Prevents slicing mid-word (e.g., "Regulation 38" is never cut into "ulation 38") across chunk overlaps |
-| **Relevance floor** | `RAG_RELEVANCE_THRESHOLD` (0.35) | Guarantees top match quality; returns honest "I don't have that information" for out-of-scope queries |
-| **Stop-word filtering** | Custom English stop-word set in BM25 | Eliminates stop-word score inflation on irrelevant questions |
-| **Embedding model** | `all-MiniLM-L6-v2` via fastembed (ONNX) | ~50 MB RAM, no PyTorch required — critical for Render free tier's 512 MB limit |
-| **LLM provider** | Groq (`openai/gpt-oss-120b`) | Zero-cost inference at ~500 tokens/sec; no credit card required |
-| **Vector store** | Qdrant Cloud | Managed service with free tier; avoids local storage issues on Render |
-| **Orchestration** | LangGraph `StateGraph` | Type-safe conditional routing with explicit state transitions; cleaner than ad-hoc if/else chains |
-| **Hybrid scoring** | 60/40 dense/sparse | Dense handles paraphrased queries; BM25 handles exact legal citations; 60/40 split empirically optimal |
-| **Fallback chain** | LLM → Grounded extract | If Groq is down, the user still gets the most relevant regulatory passage directly — never a blank error |
 
 ---
 
-## Evaluation & Verification
+## 4. Tech Stack & Libraries
 
-### Retrieval Quality
-
-Audited across 8 benchmark regulatory queries (`scripts/eval_retrieval.py`):
-
-| Metric | Result | Target | Status |
-|---|---|---|:---:|
-| **Recall@5** | **1.0000 (100%)** | > 0.90 | ✅ 8/8 Rank-1 Hits |
-| **MRR** | **1.0000** | > 0.75 | ✅ Perfect |
-
-### Generation Quality (RAGAS)
-
-Audited across 10 benchmark Q&A pairs using Groq as LLM judge (`scripts/eval_rag.py`):
-
-| Metric | Score | Target | What It Measures |
+| Library / Tool | Version | Purpose | Rationale |
 |---|---|---|---|
-| **Faithfulness** | **0.9000** | > 0.85 | Are all claims in the answer inferable from the retrieved context? |
-| **Answer Relevancy** | **0.9000** | > 0.80 | Does the answer directly address what was asked? |
-| **Context Recall** | **0.9500** | > 0.85 | Are the ground-truth statutory clauses present in the retrieved chunks? |
+| **Python** | `>=3.11` | Backend runtime | Modern high-performance asynchronous runtime |
+| **LangGraph** | `^0.0.26` | Multi-agent orchestration | Type-safe state graph with conditional supervisor routing |
+| **Qdrant Client** | `^1.7.3` | Vector database | Fast dense vector indexing with HNSW cosine search; free managed tier |
+| **fastembed** | `^0.2.2` | Dense embedding generation | ONNX-based execution of `all-MiniLM-L6-v2`; ~50MB RAM footprint, zero PyTorch dependency |
+| **rank-bm25** | `^0.2.2` | Sparse keyword retrieval | Okapi BM25 implementation catching exact statutory terminology and regulation clauses |
+| **PyMuPDF (`fitz`)** | `^1.23.21` | PDF text extraction | High-speed, robust PDF parsing and structured page layout extraction |
+| **Groq** | `^0.4.2` | High-speed LLM inference | Ultra-low-latency execution (~500 tokens/sec) of `openai/gpt-oss-120b` |
+| **FastAPI** | `^0.109.0` | Async REST backend | Asynchronous endpoints with Pydantic validation and automatic OpenAPI Swagger docs |
+| **Next.js** | `^14.1.0` | Frontend web interface | React 18 frontend with dark-mode styling and automated backend wake-up logic |
+| **Tailwind CSS** | `^3.4.0` | Frontend styling | Utility-first dark tokens tailored for enterprise legal and quant interfaces |
+| **RAGAS** | `^0.1.1` | RAG evaluation framework | Automated assessment of generation faithfulness, relevancy, and context recall |
+| **pytest** | `^8.0.0` | Test suite | 18 automated unit and integration tests across retriever, agents, and API |
 
-### Unit & Integration Tests
+---
 
-18/18 tests passing across three test modules:
+## 5. Data
 
-| Module | Tests | Coverage |
+- **Corpus Scope**: 5 core Indian financial, securities, and data privacy statutory frameworks:
+  - `sebi_lodr_2015.pdf`: SEBI Listing Obligations and Disclosure Requirements, 2015 (Reg 23, Reg 30, Reg 33, Reg 38).
+  - `sebi_sast_regulations.pdf`: SEBI Substantial Acquisition of Shares and Takeovers, 2011 (Reg 3, Reg 4, Reg 7, Reg 17).
+  - `sebi_icdr_2018.pdf`: SEBI Issue of Capital and Disclosure Requirements, 2018 (Reg 6, Reg 14, Reg 16, Reg 17).
+  - `rbi_model_risk_management.pdf`: RBI Guidelines on Model Risk Management for Financial Institutions.
+  - `dpdpa_2023.pdf`: Digital Personal Data Protection Act, 2023 (Section 5, 6, 8, 33).
+- **Volume**: 19 statutory pages yielding 30 curated semantic chunks.
+- **Chunking Strategy**: Target size **512 characters** with **64 characters overlap**, strictly constrained to whole-word boundaries via `_word_safe_tail()`.
+- **Embeddings**: `all-MiniLM-L6-v2` (384-dimensional dense vectors normalized for cosine similarity).
+- **Indexing**: Qdrant Cloud collection `sebi_rbi_docs` alongside in-memory BM25Okapi inverted index with custom stop-word filtering.
+
+---
+
+## 6. Step-by-Step Pipeline
+
+1. **Ingestion & Extraction (`scripts/ingest_docs.py`)**: Parse regulatory PDFs via PyMuPDF; isolate document metadata, regulation titles, and statutory text blocks.
+2. **Word-Safe Semantic Chunking**: Split text into 512-character blocks with 64-character overlap, trimming overlaps to whole-word boundaries to avoid token fragmentation.
+3. **Dense & Sparse Indexing**: Embed text chunks using `fastembed` (`all-MiniLM-L6-v2`); upload vectors to Qdrant Cloud and build local BM25Okapi token indices.
+4. **Query Classification**: Incoming user query hits the LangGraph Supervisor; routed to `quant_agent` if quantitative market keywords are detected, or `rag_agent` for compliance questions.
+5. **Hybrid Retrieval**:
+   - Dense retrieval queries Qdrant Cloud for top cosine similarity matches.
+   - Sparse retrieval evaluates BM25 scores with custom stop-word filtering.
+   - Fused score computed as: $\text{Score} = 0.60 \times \text{Dense} + 0.40 \times \text{BM25}_{\text{norm}}$.
+6. **Relevance Floor Guardrail**: Disqualify candidates below `RAG_RELEVANCE_THRESHOLD = 0.35`; return honest out-of-scope notifications if no chunk qualifies.
+7. **Synthesis & Citation**: Send top-5 retrieved passages to Groq LLM with a strict non-extrapolation prompt; append source filename, regulation number, page, and score to the JSON response.
+8. **Frontend Rendering**: Display answer, citation cards, and confidence metrics on the Next.js dark-mode interface.
+
+---
+
+## 7. Problems Faced & How We Solved Them
+
+| Problem | Impact | How We Got Around It |
 |---|---|---|
-| `test_retriever.py` | 5 | Hybrid retrieval, BM25 tokenization, stop-word filtering, word-safe chunking, score sorting |
-| `test_agents.py` | 7 | Supervisor routing, RAG agent, quant agent, graph compilation, relevance threshold floor |
-| `test_api.py` | 6 | Health endpoint, query endpoint, CORS, error handling |
+| **BM25 stop-word score inflation** | Common English words ("the", "of", "and") dominated BM25 scoring, ranking irrelevant chunks above actual regulatory matches | Implemented a **custom English stop-word filter** in the BM25 tokenizer, removing frequency-distorting stop words before TF-IDF scoring |
+| **Mid-word chunk splitting** | Naive character-level chunking sliced words in half (e.g., "Regulation 38" split into "ulation 38"), corrupting both retrieval indexing and answer readability | Built `_word_safe_tail()` function that enforces **whole-word boundary trimming** at chunk overlaps, guaranteeing no word is ever fractured across chunk seams |
+| **Render free tier 512MB RAM limit** | PyTorch-based embedding models exceeded the host memory budget and triggered container OOM kills | Switched to `fastembed` with ONNX runtime (`all-MiniLM-L6-v2`), which runs at ~50MB RAM without requiring PyTorch — well within the 512MB ceiling |
+| **Out-of-scope queries producing hallucinated answers** | Users asking about general trivia or weather received confident but fabricated regulatory citations | Implemented a **relevance floor** (`RAG_RELEVANCE_THRESHOLD = 0.35`) — if the top chunk score falls below this threshold, the bot honestly responds "I don't have that information" instead of forcing citations |
+| **Groq LLM downtime / rate limiting** | When the upstream LLM provider was unreachable, users received blank 500 errors | Built a **graceful fallback chain**: LLM synthesis $\rightarrow$ grounded extract (returns the top chunk text directly). The user always gets an answer, never a blank error |
+| **Dense-only search missing exact statutory terms** | Semantic search alone could miss precise statutory citations like "Regulation 38" or "Section 8(1)(j)" | Added **BM25 sparse retrieval** alongside dense Qdrant search, fused with weighted scoring ($0.60 \times \text{Dense} + 0.40 \times \text{BM25}_{\text{norm}}$) to catch both paraphrased concepts and exact statutory numbers |
+
+---
+
+## 8. Results & Evaluation
+
+### Retrieval Quality Benchmarks (`scripts/eval_retrieval.py`)
+
+Audited across 8 benchmark regulatory queries across LODR, SAST, ICDR, RBI, and DPDPA:
+
+| Metric | Result | Target | Benchmark Status |
+|---|:---:|:---:|:---:|
+| **Recall@5** | **1.0000 (100%)** | > 0.90 | ✅ 8/8 Rank-1 Hits |
+| **Mean Reciprocal Rank (MRR)** | **1.0000** | > 0.75 | ✅ Perfect Rank-1 Retrieval |
+
+### Generation Quality Benchmarks (RAGAS Framework)
+
+Audited across 10 statutory test questions using Groq as LLM judge (`scripts/eval_rag.py`):
+
+| Metric | Score | Target | Evaluation Meaning |
+|---|:---:|:---:|---|
+| **Faithfulness** | **0.9000** | > 0.85 | All claims in generated answers are inferable from retrieved statutory text |
+| **Answer Relevancy** | **0.9000** | > 0.80 | Responses directly answer the user's statutory inquiry without extraneous filler |
+| **Context Recall** | **0.9500** | > 0.85 | Ground-truth statutory legal clauses are present in the retrieved chunks |
+
+### Automated Test Suite (18/18 Tests Passing)
 
 ```bash
 pytest tests/ -v
 ```
 
----
-
-## Tech Stack
-
-| Layer | Technology | Purpose |
-|---|---|---|
-| **LLM** | Groq (`openai/gpt-oss-120b`) | Zero-cost, high-speed compliance reasoning |
-| **Orchestration** | LangGraph `StateGraph` | Multi-agent conditional routing |
-| **Dense Retrieval** | Qdrant Cloud + fastembed | Semantic vector search (384-dim, cosine) |
-| **Sparse Retrieval** | `rank-bm25` (BM25Okapi) | Exact keyword and statutory term matching |
-| **PDF Extraction** | PyMuPDF (`fitz`) | Text extraction from regulatory PDFs |
-| **Evaluation** | RAGAS + custom LLM-as-a-judge | Automated faithfulness and recall benchmarks |
-| **API** | FastAPI + Uvicorn | Async REST endpoints with OpenAPI docs |
-| **Frontend** | Next.js 14 + Tailwind CSS + Lucide | Dark-mode compliance chat interface |
-| **Deployment** | Render (backend) + Vercel (frontend) | Cloud hosting with Docker support |
+| Test Module | Tests | Verifications |
+|---|:---:|---|
+| `test_retriever.py` | 5 | Hybrid retrieval, BM25 tokenization, stop-word filtering, word-safe chunking, score sorting |
+| `test_agents.py` | 7 | Supervisor routing, RAG agent, quant agent, graph compilation, relevance threshold floor |
+| `test_api.py` | 6 | Health endpoint, query endpoint, CORS headers, error fallback chains |
 
 ---
 
-## Data
+## 9. Project Structure
 
-The retrieval knowledge base is grounded in statutory Indian financial, securities, and data privacy frameworks, ingested and indexed via `scripts/ingest_docs.py`.
-
-### Corpus Architecture & Parameters
-
-| Parameter | Specification | Implementation Detail |
-|---|---|---|
-| **Corpus Scope** | 5 statutory frameworks | Authentic Indian capital markets, takeover, banking risk, and data privacy frameworks |
-| **Total Volume** | 19 pages / 30 chunks | Extracted via PyMuPDF (`fitz`), parsed into structured statutory clauses |
-| **Chunking Strategy** | Paragraph-first semantic | Target size **512 characters**, overlap **64 characters** |
-| **Overlap Boundary Safety** | `_word_safe_tail()` | Whole-word boundary trimming to eliminate broken mid-word token fragments across chunk seams |
-| **Min Chunk Threshold** | 20 characters | Filters out trailing headers, blank lines, and residual formatting noise |
-| **Dense Embeddings** | `all-MiniLM-L6-v2` | 384 dimensions, normalized for cosine similarity, batched at 64 items via FastEmbed / ONNX |
-| **Vector Index** | Qdrant Cloud / Local | Collection `sebi_rbi_docs`, HNSW indexed, Cosine distance metric |
-| **Sparse Index** | Okapi BM25 (`rank-bm25`) | Tokenized with English stop-word filtering to prevent frequency distortion on statutory keywords |
-| **Hybrid Fusion** | Linear weighted sum | $\text{Score} = 0.60 \times \text{Dense} + 0.40 \times \text{BM25}_{\text{norm}}$ |
-| **Relevance Threshold Floor** | $0.35$ | Minimum similarity score cut-off rejecting out-of-scope or unanswerable queries |
-
-### Regulatory Document & Chunk Inventory
-
-| Document File | Statutory Scope | Pages | Chunks | Key Regulatory Topics Covered |
-|---|---|:---:|:---:|---|
-| `sebi_lodr_2015.pdf` | SEBI (Listing Obligations and Disclosure Requirements), 2015 | 4 | 6 | Reg 23 (Related Party Transactions), Reg 30 (Material Event Disclosures), Reg 33 (Financial Results), Reg 38 (25% Minimum Public Shareholding) |
-| `sebi_sast_regulations.pdf` | SEBI (Substantial Acquisition of Shares and Takeovers), 2011 | 4 | 6 | Reg 3(1) (25% Open Offer Trigger), Reg 3(2) (5% Creeping Acquisition Limit), Reg 4 (Acquisition of Control), Reg 7 (26% Offer Size), Reg 17 (Escrow Account) |
-| `sebi_icdr_2018.pdf` | SEBI (Issue of Capital and Disclosure Requirements), 2018 | 4 | 7 | Reg 6 (IPO Net Tangible Assets/Net Worth Eligibility), Reg 14 & 16 (20% Minimum Promoters' Contribution & 18-month lock-in), Reg 17 (Anchor Investor 30/90-day lock-in & 90% subscription threshold) |
-| `rbi_model_risk_management.pdf` | RBI Guidelines on Model Risk Management for Banks & NBFCs | 3 | 5 | Model Risk Governance, Section 4 (Sound Development Practices), Section 5 (Independent Model Validation), Section 7 (Model Inventory & 5-Year Audit Trails) |
-| `dpdpa_2023.pdf` | Digital Personal Data Protection Act, 2023 | 4 | 6 | Section 5 & 6 (Notice, Free and Informed Consent, Withdrawal), Section 8 (Security Safeguards & Breach Notification), Section 33 (INR 250 Cr & 200 Cr Penalties) |
-| **Total** | **5 Statutory Frameworks** | **19** | **30** | **Comprehensive Indian Securities, Banking & Privacy Coverage** |
-
-> [!NOTE]
-> Demonstration PDFs are generated programmatically via `scripts/create_sample_docs.py` to provide a reproducible, zero-copyright verification suite. Production gazette PDFs can be placed directly into `data/` and re-indexed via `python scripts/ingest_docs.py` without code modification.
-
-
----
-
-## Where — Project Structure
-
-```
+```text
 sebi-rag-bot/
-│
 ├── backend/
 │   ├── main.py              # FastAPI app: /query, /health, /eval-summary, /docs
 │   ├── agents.py            # LangGraph multi-agent system (supervisor → rag_agent / quant_agent)
 │   └── retriever.py         # HybridRetriever: Qdrant dense + BM25 sparse + hybrid scoring
-│
 ├── frontend/
 │   ├── pages/index.tsx      # Next.js chat UI with health indicator, citations, RAGAS panel
 │   ├── styles/globals.css   # Tailwind dark theme
 │   ├── vercel.json          # Vercel deployment config
 │   └── package.json
-│
 ├── scripts/
 │   ├── create_sample_docs.py  # Generates regulatory PDFs for demo/testing
-│   ├── ingest_docs.py         # Extracts text from PDFs → chunks → embeds → uploads to Qdrant
+│   ├── ingest_docs.py         # PDF text extraction → chunking → embedding → Qdrant upsert
 │   ├── eval_retrieval.py      # Retrieval benchmark (Recall@5, MRR)
 │   └── eval_rag.py            # RAGAS evaluation (faithfulness, relevancy, context recall)
-│
 ├── data/                    # Regulatory source PDFs
 │   ├── sebi_lodr_2015.pdf
 │   ├── sebi_sast_regulations.pdf
 │   ├── sebi_icdr_2018.pdf
 │   ├── rbi_model_risk_management.pdf
 │   └── dpdpa_2023.pdf
-│
-├── eval/                    # Generated evaluation reports
+├── eval/                    # Persisted evaluation reports
 │   ├── ragas_report.json
 │   └── retrieval_report.json
-│
-├── tests/                   # Pytest suite (15 tests)
+├── tests/                   # Pytest suite (18 tests)
 │   ├── test_retriever.py
 │   ├── test_agents.py
 │   └── test_api.py
-│
 ├── .env.example             # Environment variable template
-├── Dockerfile               # Python 3.11 container
-├── docker-compose.yml       # Local orchestration
-├── render.yaml              # Render Blueprint manifest
-├── requirements.txt         # Python dependencies
-└── requirements-dev.txt     # Dev/test dependencies
+├── Dockerfile               # Python 3.11 container definition
+├── docker-compose.yml       # Local multi-service orchestration
+├── render.yaml              # Render Blueprint deployment manifest
+└── requirements.txt         # Production dependencies
 ```
 
 ---
 
-## Getting Started
+## 10. Getting Started
 
 ### Prerequisites
 
-- Python 3.11+
+- Python 3.11 or higher
 - Node.js 18+ (for frontend)
-- Groq API key — free, no credit card ([console.groq.com](https://console.groq.com))
-- Qdrant Cloud account — free tier ([cloud.qdrant.io](https://cloud.qdrant.io)) _(optional for local dev — falls back to local file storage)_
+- Groq API Key ([console.groq.com](https://console.groq.com))
+- Qdrant Cloud instance or local Qdrant container
 
-### 1. Backend
+### 1. Backend Setup
 
 ```bash
-git clone https://github.com/RaajitSingh1306/sebi-rag-bot.git
-cd sebi-rag-bot
+cd "sebi-rag-bot"
 
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# Windows (PowerShell):
+.\venv\Scripts\Activate.ps1
+# Linux / macOS:
+source venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
 
-# Configure environment
+# Configure environment variables
 cp .env.example .env
-# Edit .env → add your GROQ_API_KEY (required) and optionally QDRANT_URL + QDRANT_API_KEY
+# Edit .env with your GROQ_API_KEY, QDRANT_URL, QDRANT_API_KEY
 
-# Generate sample regulatory PDFs and index them into Qdrant
+# Ingest and index regulatory corpus
 python scripts/create_sample_docs.py
 python scripts/ingest_docs.py
 
-# Run tests (15/15 passing)
+# Run tests
 pytest tests/ -v
 
-# Start API server
+# Launch FastAPI backend
 uvicorn backend.main:app --reload --port 8000
 ```
 
-### 2. Frontend
+### 2. Frontend Setup
+
+In a separate terminal:
 
 ```bash
 cd frontend
@@ -329,7 +292,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000 — the frontend auto-detects `localhost` and points to `http://localhost:8000`.
+Open `http://localhost:3000` to interact with the dark-mode compliance console.
 
 ### 3. Docker (Alternative)
 
@@ -338,42 +301,32 @@ docker compose build
 docker compose up
 ```
 
-```bash
-# Health check
-curl http://localhost:8000/health
-# → {"status": "ok", "version": "1.0.0"}
-
-# Query
-curl -X POST http://localhost:8000/query \
-  -H "Content-Type: application/json" \
-  -d '{"question": "What is minimum public shareholding under SEBI LODR?"}'
-```
-
 ---
 
-## API Reference
+## 11. API Reference
+
+### Endpoints
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/` | Service metadata and endpoint list |
-| `GET` | `/health` | Liveness check — `{"status": "ok", "version": "1.0.0"}` |
-| `POST` | `/query` | Execute multi-agent RAG/quant workflow. Body: `{"question": "..."}` |
-| `GET` | `/eval-summary` | RAGAS evaluation metrics report |
-| `GET` | `/docs` | Interactive Swagger/OpenAPI documentation |
+| `GET` | `/` | Service metadata and endpoint catalog |
+| `GET` | `/health` | Liveness and health check |
+| `POST` | `/query` | Execute multi-agent RAG / quant workflow |
+| `GET` | `/eval-summary` | RAGAS evaluation report data |
 
-### POST /query — Request
+### Sample Request (`POST /query`)
 
-```json
-{
-  "question": "What threshold triggers a mandatory open offer under SEBI SAST?"
-}
+```bash
+curl -X POST http://localhost:8000/query \
+  -H "Content-Type: application/json" \
+  -d '{"question": "What threshold triggers a mandatory open offer under SEBI SAST?"}'
 ```
 
-### POST /query — Response
+### Sample Response (`200 OK`)
 
 ```json
 {
-  "answer": "Under SEBI SAST Regulations, an acquirer who acquires shares or voting rights exceeding 25% of the total shares or voting rights of the target company must make a mandatory open offer...",
+  "answer": "Under SEBI SAST Regulations, an acquirer who acquires shares or voting rights exceeding 25% of the total shares or voting rights of the target company must make a mandatory open offer to public shareholders for at least 26% of total shares...",
   "sources": [
     {
       "source": "sebi_sast_regulations.pdf",
@@ -388,76 +341,52 @@ curl -X POST http://localhost:8000/query \
 
 ---
 
-## Deployment
+## 12. Deployment
 
-### Backend → Render
+### Backend on Render
+- Configured via `render.yaml` as a Web Service.
+- Runtime: Python 3 with `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`.
+- Set environment variables: `GROQ_API_KEY`, `GROQ_MODEL`, `P1_API_URL`, `QDRANT_URL`, `QDRANT_API_KEY`.
 
-**Option A: Blueprint (1-click)**
-1. Push to GitHub
-2. Render Dashboard → **New +** → **Blueprint** → select repo
-3. Render reads `render.yaml` and configures automatically
-4. Add `GROQ_API_KEY` in the environment variables prompt
-5. Click **Apply**
-
-**Option B: Manual Web Service**
-1. Render → **New +** → **Web Service** → select repo
-2. Configure:
-   - **Runtime**: Python 3
-   - **Build**: `pip install -r requirements.txt`
-   - **Start**: `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
-   - **Health Check**: `/health`
-   - **Plan**: Free
-3. Add env vars: `GROQ_API_KEY`, `GROQ_MODEL`, `P1_API_URL`, `QDRANT_URL`, `QDRANT_API_KEY`
-
-### Frontend → Vercel
-
-1. Vercel → **Add New Project** → import `sebi-rag-bot`
-2. Set **Root Directory** to `frontend`
-3. Add env var: `NEXT_PUBLIC_API_URL` = `https://sebi-rag-bot.onrender.com`
-4. Deploy
-
-> **Note:** Render free tier spins down after ~15 min of inactivity. The frontend includes automatic retry logic (4 attempts, 6s intervals) to handle cold starts gracefully.
+### Frontend on Vercel
+- Root directory set to `frontend`.
+- Environment variable: `NEXT_PUBLIC_API_URL=https://sebi-rag-bot.onrender.com`.
+- Includes automatic polling retry logic to handle Render free-tier cold starts gracefully.
 
 ---
 
-## Connected Projects
+## 13. Connected Portfolio Projects
 
-This multi-agent system connects directly to the quantitative finance and machine learning ecosystem:
-
-| Project | Role | Repository |
-|---|---|---|
-| **SEBI RAG Bot** (This Repo) | Compliance Q&A + multi-agent regulatory orchestration | [sebi-rag-bot](https://github.com/RaajitSingh1306/sebi-rag-bot) |
-| **Volatility Intelligence Platform** | Production GARCH + HMM + XGBoost market intelligence API | [volatility-intelligence-platform](https://github.com/RaajitSingh1306/volatility-intelligence-platform) |
-| **Credit Default Predictor** | Loan default prediction & TreeSHAP explainability engine | [Credit-Default-Predictor](https://github.com/RaajitSingh1306/Credit-Default-Predictor) |
-| **NSEI Daily Stock Pipeline** | Financial data lakehouse & feature store (Airflow, Spark, DuckDB) | [NSEI-Daily-Stock-Pipeline](https://github.com/RaajitSingh1306/NSEI-Daily-Stock-Pipeline) |
-| **Nifty Sector Rotation** | Momentum strategy on Indian sector indices | [Nifty-Sector-Rotation](https://github.com/RaajitSingh1306/Nifty-Sector-Rotation) |
-| **Volatility Classifier (Simplified)** | *Superseded (v2)*: Single-asset HMM + GARCH refactor | [volatility-classifier-simplified](https://github.com/RaajitSingh1306/volatility-classifier-simplified) |
-
-The `quant_agent` in this bot calls the [Volatility Intelligence Platform](https://github.com/RaajitSingh1306/volatility-intelligence-platform) API in real time to fetch current market regimes, GARCH volatility, and predictive probability distributions.
+- **[Volatility Intelligence Platform](https://github.com/RaajitSingh1306/volatility-intelligence-platform)**: Flagship market intelligence API called directly by this bot's `quant_agent` to fetch real-time volatility regimes and forecasts.
+- **[Credit Default Predictor](https://github.com/RaajitSingh1306/Credit-Default-Predictor)**: Machine learning loan default prediction system grounded in the RBI Model Risk Management guidelines indexed by this bot.
+- **[NSEI Daily Stock Pipeline](https://github.com/RaajitSingh1306/NSEI-Daily-Stock-Pipeline)**: Data lakehouse providing the upstream feature store for market indicators.
+- **[Nifty Sector Rotation](https://github.com/RaajitSingh1306/Nifty-Sector-Rotation)**: Quantitative momentum strategy operating on Indian equity sectors.
 
 ---
 
-## Limitations & Roadmap
+## 14. Limitations & Known Issues
 
-### Known Limitations
-- **Corpus Scope**: Currently indexed with 5 representative statutory frameworks rather than the full legislative gazette of SEBI Master Circulars and RBI Master Directions.
-- **Text-Only PDF Extraction**: PyMuPDF extraction (`fitz.get_text()`) extracts plain-text blocks; complex tabular disclosure matrices, financial ratios, and multi-column schedules are not parsed structurally.
-- **Groq Free-Tier Rate Limits**: Production inference operates under Groq cloud rate limits (~30 requests/minute), requiring exponential backoff and client throttling for burst query traffic.
-- **Volatile BM25 Index**: The BM25 index is maintained in-memory across worker lifecycles; while reconstructed dynamically from Qdrant scroll on startup, it lacks disk-backed persistence.
-- **Collection Overwrite on Ingest**: Running `scripts/ingest_docs.py` executes `recreate_collection`, wiping previous vectors without incremental hash-based versioning.
-- **Fixed Fusion Weights**: The hybrid retrieval scoring weight (60% dense vector, 40% BM25 sparse) is empirically tuned rather than dynamically learned via cross-entropy optimization on domain benchmarks.
-- **Single-Turn Context Assembly**: The supervisor and RAG agent process queries independently; multi-turn coreference resolution and multi-hop statutory synthesis across separate acts are not yet supported.
+- **Corpus Breadth**: Indexed with 5 representative statutory frameworks rather than the complete gazette of SEBI Master Circulars and legal precedents.
+- **Text-Only Extraction**: PyMuPDF extracts plain-text paragraphs; complex financial ratio tables, schedules, and penalty formulas are not extracted via computer vision / table transformer models.
+- **In-Memory BM25 Index**: The BM25 index is loaded into memory on worker startup from Qdrant scroll; it lacks persistent disk serialization.
+- **Single-Turn Context**: Operates primarily as a single-turn Q&A engine; does not maintain multi-turn conversational coreference resolution across separate legal acts.
 
-### Roadmap
-- [ ] **Full Gazette Ingestion**: Expand corpus to encompass comprehensive SEBI Master Circulars, PIT (Prohibition of Insider Trading), ICDR schedules, and AIF regulations.
-- [ ] **Table-Aware Document Extraction**: Integrate Camelot/Table Transformer for structural extraction of regulatory financial ratios, disclosure tables, and penalty matrices.
-- [ ] **Incremental Document Versioning**: Implement sha256 document hashing and payload timestamps for append-only delta indexing without full collection recreation.
-- [ ] **Two-Stage Cross-Encoder Reranking**: Deploy a cross-encoder reranker (`bge-reranker-large`) over top-20 hybrid candidates to optimize top-5 precision.
+---
+
+## 15. Roadmap / Future Expansion
+
+- [ ] **Full Gazette Ingestion**: Expand corpus to encompass full SEBI Master Circulars, PIT (Prohibition of Insider Trading), and AIF regulations.
+- [ ] **Table-Aware Document Extraction**: Integrate Table Transformer / Camelot for structural extraction of financial ratio tables and disclosure matrices.
+- [ ] **Two-Stage Cross-Encoder Reranking**: Deploy a cross-encoder (`bge-reranker-large`) over top-20 hybrid candidates to optimize top-5 precision.
 - [ ] **Multi-Hop Knowledge Graph (GraphRAG)**: Construct entity relation graphs connecting cross-statutory provisions between SEBI LODR, Companies Act 2013, and RBI Master Directions.
-- [ ] **Session & Thread Memory**: Implement persistent multi-turn conversational memory backed by Redis/PostgreSQL session storage.
+- [ ] **Session & Thread Memory**: Implement persistent multi-turn conversational memory backed by Redis session storage.
 
 ---
 
-## License
+## 16. License & Disclaimer
 
-MIT License. Built for regulatory compliance research and fintech intelligence.
+### License
+This project is licensed under the [MIT License](https://opensource.org/licenses/MIT).
+
+### Disclaimer
+This system is intended strictly for educational research and compliance decision support. It does not constitute formal legal counsel or statutory advice.
